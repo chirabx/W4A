@@ -17,7 +17,7 @@ private:
     const double Kp = 8;                    // 比例系数
     const double target_x_tolerance = 0.04; // X轴位置容忍误差
 
-    const double z_target_distance = 0.35;
+    const double z_target_distance = 0.167;
     const double target_z_tolerance = 0.04;
 
     bool should_exit_ = false;
@@ -48,18 +48,17 @@ public:
         {
             if (detection.id[0] == tag_id)
             {
-                
+
                 double current_x = detection.pose.pose.pose.position.x;
                 ROS_INFO("The current x position is %f", current_x);
                 double current_z = detection.pose.pose.pose.position.z;
                 ROS_INFO("The current z position is %f", current_z);
-                
 
                 if ((fabs(current_x) < target_x_tolerance) && (fabs(current_z - z_target_distance) < target_z_tolerance))
                 {
                     shoot_client.call(empty_srv);
 
-                    cmd_vel.angular.z = - 0.3;
+                    cmd_vel.angular.z = -0.3;
                     int count = 0;
                     ros::Rate loop_rate(10);
                     while (ros::ok() && count < 10)

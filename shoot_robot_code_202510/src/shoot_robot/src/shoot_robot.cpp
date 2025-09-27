@@ -24,7 +24,7 @@ bool navigateAndShoot(MoveBaseClient &ac, const ShootPoint &point, int goal_numb
     // 设置目标点
     move_base_msgs::MoveBaseGoal goal;
     tf2::Quaternion quaternion;
-    quaternion.setRPY(0, 0, point.yaw);
+    quaternion.setRPY(0, 0, point.yaw); // 将yaw转换为四元数
 
     goal.target_pose.pose.position.x = point.x;
     goal.target_pose.pose.position.y = point.y;
@@ -64,14 +64,18 @@ int main(int argc, char **argv)
     // 定义所有射击点
     std::vector<ShootPoint> shoot_points = {
         // 普通靶标射击点
-        {0.5, 0.0, -1.5707, "第1个普通靶标(右转90度)", "shoot_tag_1.launch"},
-        {1.0, 0.0, -1.5707, "第2个普通靶标(右转90度)", "shoot_tag_1.launch"},
-        {1.0, 0.0, 0.0, "第3个普通靶标(正前方)", "shoot_tag_1.launch"},
-        {0.5, 0.0, 1.5707, "第4个普通靶标(左转90度)", "shoot_tag_1.launch"},
+        {0.893, -0.748, -0.999, "第1个普通靶标(右转90度)", "shoot_tag_1.launch"},
+        {0.843, 1.583, 0.698, "第2个普通靶标(右转90度)", "shoot_tag_1.launch"},
+        {0.178, 1.643, 2.540, "第3个普通靶标(正前方)", "shoot_tag_1.launch"},
+        {0.140, 0.806, -2.301, "第4个普通靶标(左转90度)", "shoot_tag_1.launch"},
+        {2.374, -0.062, 0.84, "第5个普通靶标(左转90度)", "shoot_tag_1.launch"},
+        {2.413, -0.767, -0.866, "第6个普通靶标(左转90度)", "shoot_tag_1.launch"},
+        {1.702, -0.837, -2.424, "第7个普通靶标(左转90度)", "shoot_tag_1.launch"},
+        {1.648, 1.509, 2.346, "第8个普通靶标(左转90度)", "shoot_tag_1.launch"},
         // 敌方基地射击点
-        {1.0, -2.0, -1.5707, "敌方基地(右转90度)", "shoot_tag_2.launch"},
-        // 返回起始点
-        {0.0, 0.0, 0.0, "返回起始点", ""}};
+        {2.392, 1.514, 0.808, "敌方基地(右转90度)", "shoot_tag_2.launch"}
+
+    };
 
     // 依次执行所有射击点
     for (size_t i = 0; i < shoot_points.size(); ++i)

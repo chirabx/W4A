@@ -88,7 +88,7 @@ public:
         }
         if (!target_found)
         {
-            cmd_vel.linear.x = 0;
+            cmd_vel.linear.x;
             cmd_vel.angular.z = 0;
         }
         cmd_vel_pub_.publish(cmd_vel);

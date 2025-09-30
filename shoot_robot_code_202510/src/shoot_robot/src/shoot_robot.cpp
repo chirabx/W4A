@@ -64,16 +64,16 @@ int main(int argc, char **argv)
     // 定义所有射击点
     std::vector<ShootPoint> shoot_points = {
         // 普通靶标射击点
-        {0.893, -0.748, -0.999, "第1个普通靶标(右转90度)", "shoot_tag_1.launch"},
-        {0.843, 1.583, 0.698, "第2个普通靶标(右转90度)", "shoot_tag_1.launch"},
-        {0.178, 1.643, 2.540, "第3个普通靶标(正前方)", "shoot_tag_1.launch"},
-        {0.140, 0.806, -2.301, "第4个普通靶标(左转90度)", "shoot_tag_1.launch"},
-        {2.374, -0.062, 0.84, "第5个普通靶标(左转90度)", "shoot_tag_1.launch"},
-        {2.413, -0.767, -0.866, "第6个普通靶标(左转90度)", "shoot_tag_1.launch"},
-        {1.702, -0.837, -2.424, "第7个普通靶标(左转90度)", "shoot_tag_1.launch"},
-        {1.648, 1.509, 2.346, "第8个普通靶标(左转90度)", "shoot_tag_1.launch"},
+        {0.893, -0.748, -0.999, "Target 1", "shoot_tag_1.launch"},
+        {0.843, 1.583, 0.698, "Target 2", "shoot_tag_1.launch"},
+        {0.178, 1.643, 2.540, "Target 3", "shoot_tag_1.launch"},
+        {0.140, 0.806, -2.301, "Target 4", "shoot_tag_1.launch"},
+        {2.374, -0.062, 0.84, "Target 5", "shoot_tag_1.launch"},
+        {2.413, -0.767, -0.866, "Target 6", "shoot_tag_1.launch"},
+        {1.702, -0.837, -2.424, "Target 7", "shoot_tag_1.launch"},
+        {1.648, 1.509, 2.346, "Target 8", "shoot_tag_1.launch"},
         // 敌方基地射击点
-        {2.392, 1.514, 0.808, "敌方基地(右转90度)", "shoot_tag_2.launch"}
+        {2.392, 1.514, 0.808, "Enemy Base", "shoot_tag_2.launch"}
 
     };
 

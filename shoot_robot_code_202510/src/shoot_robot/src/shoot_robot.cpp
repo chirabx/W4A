@@ -4,85 +4,169 @@
 #include <iostream>
 #include <geometry_msgs/Quaternion.h>
 #include <tf2/LinearMath/Quaternion.h>
-#include <vector>
+#include <std_srvs/Empty.h>
+#include <geometry_msgs/Twist.h>
 
 using namespace std;
 
+
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
-
-// 射击点结构体
-struct ShootPoint
+void sleep(double second)
 {
-    double x, y, yaw;
-    std::string description;
-    std::string launch_file;
-};
+    ros::Duration(second).sleep();
+}
 
-// 导航到指定点并执行射击的辅助函数
-bool navigateAndShoot(MoveBaseClient &ac, const ShootPoint &point, int goal_number)
+void Move2goal(MoveBaseClient& ac, double x, double y, double yaw)
 {
-    // 设置目标点
-    move_base_msgs::MoveBaseGoal goal;
     tf2::Quaternion quaternion;
-    quaternion.setRPY(0, 0, point.yaw); // 将yaw转换为四元数
-
-    goal.target_pose.pose.position.x = point.x;
-    goal.target_pose.pose.position.y = point.y;
+    quaternion.setRPY(0, 0, yaw);
+    move_base_msgs::MoveBaseGoal goal;
+    goal.target_pose.pose.position.x = x;
+    goal.target_pose.pose.position.y = y;
     goal.target_pose.pose.orientation.z = quaternion.z();
     goal.target_pose.pose.orientation.w = quaternion.w();
     goal.target_pose.header.frame_id = "map";
     goal.target_pose.header.stamp = ros::Time::now();
-
-    // 发送目标并等待结果
     ac.sendGoal(goal);
-    ROS_INFO("Send Goal %d: %s", goal_number, point.description.c_str());
+    ROS_INFO("MoveBase Send Goal !!!");
     ac.waitForResult();
 
     if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
     {
-        ROS_INFO("Goal %d reached successfully!", goal_number);
-        if (!point.launch_file.empty())
-        {
-            std::string command = "roslaunch shoot_robot " + point.launch_file;
-            system(command.c_str());
-        }
-        return true;
+        ROS_INFO("The Goal 1 Reached Successfully!!!");
+        system("roslaunch shoot_robot shoot_tag_1.launch");
     }
     else
     {
-        ROS_WARN("Goal %d planning failed for some reason", goal_number);
-        return false;
+        ROS_WARN("The Goal Planning Failed for some reason");
+        ros::NodeHandle nh;
+
+        geometry_msgs::Twist vel_msg;
+        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+        int count = 0;
+        ros::Rate loop_rate(10);
+        vel_msg.linear.x = -0.05;//cbx
+        count = 0;
+        while (ros::ok() && count < 30) // yyx
+        {
+            pub.publish(vel_msg);
+            ros::spinOnce();
+            loop_rate.sleep();
+            count++;
+        }
+        // 停下
+        vel_msg.linear.x = 0.0;
+        pub.publish(vel_msg);
+
+        Move2goal(ac, x, y, yaw);
+
     }
+    // sleep(0.5);
 }
 
-int main(int argc, char **argv)
+void Move1goal(MoveBaseClient& ac, double x, double y, double yaw)
 {
-    ros::init(argc, argv, "send_goals_node");
+    tf2::Quaternion quaternion;
+    quaternion.setRPY(0, 0, yaw);
+    move_base_msgs::MoveBaseGoal goal;
+    goal.target_pose.pose.position.x = x;
+    goal.target_pose.pose.position.y = y;
+    goal.target_pose.pose.orientation.z = quaternion.z();
+    goal.target_pose.pose.orientation.w = quaternion.w();
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.header.stamp = ros::Time::now();
+    ac.sendGoal(goal);
+    ROS_INFO("MoveBase Send Goal !!!");
+    ac.waitForResult();
+
+    if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+    {
+        ROS_INFO("The Goal 1 Reached Successfully!!!");
+        // system("roslaunch shoot_robot shoot_tag_1.launch");
+    }
+    else
+    {
+        ROS_WARN("The Goal Planning Failed for some reason");
+        ros::NodeHandle nh;
+
+        geometry_msgs::Twist vel_msg;
+        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+        int count = 0;
+        ros::Rate loop_rate(10);
+        vel_msg.linear.x = -0.05;//cbx
+        count = 0;
+        while (ros::ok() && count < 30) // yyx
+        {
+            pub.publish(vel_msg);
+            ros::spinOnce();
+            loop_rate.sleep();
+            count++;
+        }
+        // 停下
+        vel_msg.linear.x = 0.0;
+        pub.publish(vel_msg);
+
+        Move1goal(ac, x, y, yaw);
+    }
+        
+}
+
+int main(int argc, char** argv)
+{
+    ros::init(argc, argv, "shoot_robot_base");
+    ros::NodeHandle nh;
+
+    geometry_msgs::Twist vel_msg;
+    ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+    ros::ServiceClient shoot_close_client;
+    std_srvs::Empty empty_srv;
+
+    shoot_close_client = nh.serviceClient<std_srvs::Empty>("/close");
     MoveBaseClient ac("move_base", true);
     ac.waitForServer();
 
-    // 定义所有射击点
-    std::vector<ShootPoint> shoot_points = {
-        // 普通靶标射击点
-        {0.893, -0.748, -0.999, "Target 1", "shoot_tag_1.launch"},
-        {0.843, 1.583, 0.698, "Target 2", "shoot_tag_1.launch"},
-        {0.178, 1.643, 2.540, "Target 3", "shoot_tag_1.launch"},
-        {0.140, 0.806, -2.301, "Target 4", "shoot_tag_1.launch"},
-        {2.374, -0.062, 0.84, "Target 5", "shoot_tag_1.launch"},
-        {2.413, -0.767, -0.866, "Target 6", "shoot_tag_1.launch"},
-        {1.702, -0.837, -2.424, "Target 7", "shoot_tag_1.launch"},
-        {1.648, 1.509, 2.346, "Target 8", "shoot_tag_1.launch"},
-        // 敌方基地射击点
-        {2.392, 1.514, 0.808, "Enemy Base", "shoot_tag_2.launch"}
+    int count = 0;
+    ros::Rate loop_rate(10);
 
-    };
 
-    // 依次执行所有射击点
-    for (size_t i = 0; i < shoot_points.size(); ++i)
-    {
-        navigateAndShoot(ac, shoot_points[i], i + 1);
-    }
+    //xia 45
 
-    ROS_INFO("All shooting tasks completed!");
+    //第一个目标点
+    Move2goal(ac, 0.893, -0.748, -0.999);
+    shoot_close_client.call(empty_srv);
+
+    // //第二个目标点
+    Move2goal(ac, 0.843, 1.583, 0.698);   
+    shoot_close_client.call(empty_srv);
+
+    // //第三个目标点
+    Move2goal(ac, 0.178, 1.643, 2.540); 
+    shoot_close_client.call(empty_srv);
+
+    //第四个目标点
+    Move2goal(ac, 0.140, 0.806, -2.301);
+    shoot_close_client.call(empty_srv);
+
+    //第五个目标点
+    Move2goal(ac, 2.374, -0.062, 0.84);  
+    shoot_close_client.call(empty_srv);
+
+    //第六个目标点
+    Move2goal(ac, 2.413, -0.767, -0.866);   
+    shoot_close_client.call(empty_srv);
+
+    //第七个目标点
+    Move2goal(ac, 1.702, -0.837, -2.424); 
+    shoot_close_client.call(empty_srv);
+
+    //第八个目标点
+    Move2goal(ac, 1.648, 1.509, 2.346);
+    shoot_close_client.call(empty_srv);
+
+    //第九个目标点
+    Move2goal(ac, 2.392, 1.514, 0.808);
+    shoot_close_client.call(empty_srv);
+
     return 0;
+
 }

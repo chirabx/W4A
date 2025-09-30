@@ -10,6 +10,10 @@
 using namespace std;
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
+// Function declarations
+void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_name);
+void Move1goal(MoveBaseClient &ac, double x, double y, double yaw);
+void performRetryLogic(MoveBaseClient &ac, double x, double y, double yaw, const std::string &tag_name);
 void sleep(double second)
 {
     ros::Duration(second).sleep();
@@ -99,51 +103,6 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
     // sleep(0.5);
 }
 
-void Move1goal(MoveBaseClient &ac, double x, double y, double yaw)
-{
-    tf2::Quaternion quaternion;
-    quaternion.setRPY(0, 0, yaw);
-    move_base_msgs::MoveBaseGoal goal;
-    goal.target_pose.pose.position.x = x;
-    goal.target_pose.pose.position.y = y;
-    goal.target_pose.pose.orientation.z = quaternion.z();
-    goal.target_pose.pose.orientation.w = quaternion.w();
-    goal.target_pose.header.frame_id = "map";
-    goal.target_pose.header.stamp = ros::Time::now();
-    ac.sendGoal(goal);
-    ROS_INFO("MoveBase Send Goal !!!");
-    ac.waitForResult();
-
-    if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-    {
-        ROS_INFO("The Goal 1 Reached Successfully!!!");
-        // system("roslaunch shoot_robot shoot_tag_1.launch");
-    }
-    else
-    {
-        ROS_WARN("The Goal Planning Failed for some reason");
-        ros::NodeHandle nh;
-
-        geometry_msgs::Twist vel_msg;
-        ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
-        int count = 0;
-        ros::Rate loop_rate(10);
-        vel_msg.linear.x = -0.05; // cbx
-        count = 0;
-        while (ros::ok() && count < 30) // yyx
-        {
-            pub.publish(vel_msg);
-            ros::spinOnce();
-            loop_rate.sleep();
-            count++;
-        }
-        // Stop
-        vel_msg.linear.x = 0.0;
-        pub.publish(vel_msg);
-
-        Move1goal(ac, x, y, yaw);
-    }
-}
 
 int main(int argc, char **argv)
 {
@@ -162,22 +121,21 @@ int main(int argc, char **argv)
     int count = 0;
     ros::Rate loop_rate(10);
 
-    // xia 45
 
     // First target point
-    Move2goal(ac, 0.893, -0.748, -0.999, "1");
+    Move2goal(ac, 0.910, -0.720, -0.980, "1");
     shoot_close_client.call(empty_srv);
 
     // //Second target point
-    Move2goal(ac, 0.843, 1.583, 0.698, "1");
+    Move2goal(ac, 0.827, 1.423, 0.905, "1");
     shoot_close_client.call(empty_srv);
 
     // //Third target point
-    Move2goal(ac, 0.178, 1.643, 2.540, "1");
+    Move2goal(ac, 0.156, 1.586, 2.334, "1");
     shoot_close_client.call(empty_srv);
 
     // Fourth target point
-    Move2goal(ac, 0.140, 0.806, -2.301, "1");
+    Move2goal(ac, 0.201, 0.649, -2.632, "1");
     shoot_close_client.call(empty_srv);
 
     // Fifth target point

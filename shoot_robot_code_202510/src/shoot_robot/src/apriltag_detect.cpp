@@ -23,7 +23,7 @@ private:
     bool should_exit_ = false;
     bool is_backing_up_ = false;
     ros::Time backup_start_time_;
-    const double backup_duration_ = 3.0; // 后退持续时间（秒）
+    const double backup_duration_ = 5.0; // 后退持续时间（秒）
 
     std_srvs::Empty empty_srv;
 

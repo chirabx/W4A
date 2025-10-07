@@ -92,6 +92,18 @@ public:
             ROS_INFO("back");
             cmd_vel.linear.x = -0.1;
             cmd_vel.angular.z = 0;
+            // // 连续几次识别不到进行下一个任务
+            // int count = 0;              
+            // ros::Rate loop_rate(10);
+            // while (ros::ok() && count < 7)   
+            // {
+            //     cmd_vel_pub_.publish(cmd_vel);
+            //     ros::spinOnce();
+            //     loop_rate.sleep();
+            //     count++;
+            // }
+            // // 停下
+            // cmd_vel.linear.x = 0.0;
         }
         cmd_vel_pub_.publish(cmd_vel);
     }

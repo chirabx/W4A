@@ -33,5 +33,8 @@ target_link_libraries(shoot_robot_node ${catkin_LIBRARIES})
 add_executable(shoot_robot_base_node src/shoot_robot_base.cpp)
 target_link_libraries(shoot_robot_base_node ${catkin_LIBRARIES})
 
+add_executable(shoot_robot_last_node src/shoot_robot_last.cpp)
+target_link_libraries(shoot_robot_last_node ${catkin_LIBRARIES})
+
 add_executable(w2u_task_flow_node src/task_flow.cpp)
 target_link_libraries(w2u_task_flow_node ${catkin_LIBRARIES})

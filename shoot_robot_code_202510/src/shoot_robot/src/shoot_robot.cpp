@@ -123,39 +123,40 @@ int main(int argc, char **argv)
 
 
     // First target point
-    Move2goal(ac, 0.910, -0.720, -0.980, "1");
+    Move2goal(ac, 0.810, -0.890, -0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // //Second target point
-    Move2goal(ac, 0.827, 1.423, 0.905, "1");
+    Move2goal(ac, 0.847, 1.483, 0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // //Third target point
-    Move2goal(ac, 0.156, 1.586, 2.334, "1");
+    Move2goal(ac, 0.116, 1.516, 2.355, "1");
     shoot_close_client.call(empty_srv);
 
     // Fourth target point
-    Move2goal(ac, 0.201, 0.649, -2.632, "1");
+    Move2goal(ac, 0.131, 0.799, -2.355, "1");
     shoot_close_client.call(empty_srv);
 
     // Fifth target point
-    Move2goal(ac, 2.374, -0.062, 0.84, "1");
+    Move2goal(ac, 2.354, -0.062, 0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // Sixth target point
-    Move2goal(ac, 2.413, -0.767, -0.866, "1");
+    Move2goal(ac, 2.433, -0.767, -0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // Seventh target point
-    Move2goal(ac, 1.702, -0.837, -2.424, "1");
+    Move2goal(ac, 1.642, -0.817, -2.355, "1");
     shoot_close_client.call(empty_srv);
 
     // Eighth target point
-    Move2goal(ac, 1.648, 1.509, 2.346, "1");
+    Move2goal(ac, 1.668, 1.529, 2.355, "1");
     shoot_close_client.call(empty_srv);
 
     // Enemy base
-    Move2goal(ac, 2.392, 1.514, 0.808, "2");
+    Move2goal(ac, 2.392, 1.534, 0.785, "2");
+    // Move2goal(ac, 2.392, 1.534, 0.785, "3");
     shoot_close_client.call(empty_srv);
 
     return 0;

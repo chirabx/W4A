@@ -15,10 +15,10 @@ private:
 
     // PID控制参数
     const double Kp = 8;                    // 比例系数
-    const double target_x_tolerance = 0.04; // X轴位置容忍误差
+    const double target_x_tolerance = 0.01; // X轴位置容忍误差
 
-    const double z_target_distance = 0.167;
-    const double target_z_tolerance = 0.04;
+    const double z_target_distance = 0.114;
+    const double target_z_tolerance = 0.02;
 
     bool should_exit_ = false;
 
@@ -57,12 +57,13 @@ public:
                 if ((fabs(current_x) < target_x_tolerance) && (fabs(current_z - z_target_distance) < target_z_tolerance))
                 {
                     shoot_client.call(empty_srv);
-
-                    cmd_vel.angular.z = -0.3;
+                    cmd_vel.angular.z = -0.1;
+                    cmd_vel.linear.x = 0;
                     int count = 0;
                     ros::Rate loop_rate(10);
-                    while (ros::ok() && count < 10)
+                    while (ros::ok() && count < 20)
                     {
+                        ROS_INFO("shoot");
                         cmd_vel_pub_.publish(cmd_vel);
                         ros::spinOnce();
                         loop_rate.sleep();
@@ -88,7 +89,8 @@ public:
         }
         if (!target_found)
         {
-            cmd_vel.linear.x;
+            ROS_INFO("back");
+            cmd_vel.linear.x = -0.1;
             cmd_vel.angular.z = 0;
         }
         cmd_vel_pub_.publish(cmd_vel);

@@ -155,9 +155,9 @@ int main(int argc, char **argv)
     shoot_close_client.call(empty_srv);
 
     // Enemy base
-    Move2goal(ac, 2.195, 1.431, 0.700, "2");
-    // Move2goal(ac, 2.392, 1.534, 0.785, "3");
-    shoot_close_client.call(empty_srv);
+    // Move2goal(ac, 2.375, 1.431, 0.700, "2");
+    Move2goal(ac, 2.392, 1.534, 0.785, "3");
+    // shoot_close_client.call(empty_srv);
 
     return 0;
 }

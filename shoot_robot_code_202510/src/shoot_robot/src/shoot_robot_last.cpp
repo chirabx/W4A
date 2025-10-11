@@ -6,6 +6,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <std_srvs/Empty.h>
 #include <geometry_msgs/Twist.h>
+#include <string>
 
 using namespace std;
 
@@ -103,7 +104,6 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
     // sleep(0.5);
 }
 
-
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "shoot_robot_base");
@@ -118,48 +118,118 @@ int main(int argc, char **argv)
     MoveBaseClient ac("move_base", true);
     ac.waitForServer();
 
-    int count = 0;
     ros::Rate loop_rate(10);
 
-// #################################################
-    // // First target point
-    // Move2goal(ac, 0.810, -0.890, -0.785, "1");
-    // shoot_close_client.call(empty_srv);
+    string input = "172";
 
-    // // Enemy base
-    // Move2goal(ac, 2.532, 1.104, 1.37, "2");
-    // shoot_close_client.call(empty_srv);
-// #################################################
-    // Fifth target point
-    Move2goal(ac, 2.354, -0.062, 0.785, "1");
-    shoot_close_client.call(empty_srv);
+    for (size_t i = 0; i < input.length(); ++i)
+    {
+        char ch = input[i];
+        if (ch=='1') 
+        {
+            // First target point
+            Move2goal(ac, 0.810, -0.890, -0.785, "1");
+        }
+        else if (ch=='2')
+        {
+            //Second target point
+            Move2goal(ac, 0.847, 1.483, 0.785, "1");
+        }
+        else if (ch=='3')
+        {
+            //Third target point
+            Move2goal(ac, 0.116, 1.516, 2.355, "1");
+        }
+        else if(ch=='4')
+        {
+            // Fourth target point
+            Move2goal(ac, 0.131, 0.799, -2.355, "1");
+        }
+        else if(ch=='5')
+        {
+            // Fifth target point
+            Move2goal(ac, 2.354, -0.062, 0.785, "1");
+        }
+        else if(ch=='6')
+        {
+            // Sixth target point
+            Move2goal(ac, 2.433, -0.767, -0.785, "1");
+        }
+        else if(ch=='7')
+        {
+            // Seventh target point
+            Move2goal(ac, 1.642, -0.817, -2.355, "1");
+        }
+        else if(ch=='8')
+        {
+            // Eighth target point
+            Move2goal(ac, 1.668, 1.529, 2.355, "1");
+        }
+        if (i != input.length())
+        {
+            shoot_close_client.call(empty_srv);
+        }
+    }
 
-    // Sixth target point
-    Move2goal(ac, 2.433, -0.767, -0.785, "1");
-    shoot_close_client.call(empty_srv);
-
-    // Seventh target point
-    Move2goal(ac, 1.642, -0.817, -2.355, "1");
-    shoot_close_client.call(empty_srv);
 
     // Enemy base
-    Move2goal(ac, 2.552, 1.404, 1.17, "2");
+    Move2goal(ac, 2.552, 1.404, 1.17, "3");
     shoot_close_client.call(empty_srv);
-// #################################################
-    // Move2goal(ac, 2.354, -0.062, 0.785, "1");
-    // shoot_close_client.call(empty_srv);
+//###############################################################
+    string input = "172";
 
-    // // Sixth target point
-    // Move2goal(ac, 2.433, -0.767, -0.785, "1");
-    // shoot_close_client.call(empty_srv);
-
-    // // Seventh target point
-    // Move2goal(ac, 1.642, -0.817, -2.355, "1");
-    // shoot_close_client.call(empty_srv);
-
-    // // Enemy base
-    // Move2goal(ac, 2.552, 1.404, 1.17, "2");
-    // shoot_close_client.call(empty_srv);
+    for (size_t i = 0; i < input.length(); ++i)
+    {
+        char ch = input[i];
+        if (ch=='1') 
+        {
+            // First target point
+            Move2goal(ac, 0.810, -0.890, -0.785, "1");
+        }
+        else if (ch=='2')
+        {
+            //Second target point
+            Move2goal(ac, 0.847, 1.483, 0.785, "1");
+        }
+        else if (ch=='3')
+        {
+            //Third target point
+            Move2goal(ac, 0.116, 1.516, 2.355, "1");
+        }
+        else if(ch=='4')
+        {
+            // Fourth target point
+            Move2goal(ac, 0.131, 0.799, -2.355, "1");
+        }
+        else if(ch=='5')
+        {
+            // Fifth target point
+            Move2goal(ac, 2.354, -0.062, 0.785, "1");
+        }
+        else if(ch=='6')
+        {
+            // Sixth target point
+            Move2goal(ac, 2.433, -0.767, -0.785, "1");
+        }
+        else if(ch=='7')
+        {
+            // Seventh target point
+            Move2goal(ac, 1.642, -0.817, -2.355, "1");
+        }
+        else if(ch=='8')
+        {
+            // Eighth target point
+            Move2goal(ac, 1.668, 1.529, 2.355, "1");
+        }
+        if (i != input.length())
+        {
+            shoot_close_client.call(empty_srv);
+        }
+    }
+    
+    // Enemy base
+    Move2goal(ac, 2.552, 1.404, 1.17, "3");
+    shoot_close_client.call(empty_srv);
 
     return 0;
 }

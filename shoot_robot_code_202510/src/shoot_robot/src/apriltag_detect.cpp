@@ -14,7 +14,7 @@ private:
     ros::ServiceClient shoot_client;
 
     // PID控制参数
-    const double Kp = 8;                    // 比例系数
+    const double Kp = 5;                    // 比例系数
     const double target_x_tolerance = 0.01; // X轴位置容忍误差
 
     const double z_target_distance = 0.114;
@@ -80,7 +80,14 @@ public:
 
                 else if (fabs(current_x) > target_x_tolerance)
                 {
-                    cmd_vel.angular.z = Kp * (-current_x);
+                    if (fabs(fabs(current_x) - target_x_tolerance) < 0.0065)
+                    {
+                        cmd_vel.angular.z = 8 * (-current_x);
+                    }
+                    else
+                    {
+                        cmd_vel.angular.z = Kp * (-current_x);
+                    }
                 }
                 else if (fabs(current_z - z_target_distance) > target_z_tolerance)
                 {

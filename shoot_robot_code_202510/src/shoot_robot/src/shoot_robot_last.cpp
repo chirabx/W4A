@@ -11,13 +11,58 @@
 using namespace std;
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
+
+// 全局变量：ABORTED状态计数器
+static int aborted_counter_tag2 = 0; // tag_name="2"的ABORTED计数
+static int aborted_counter_tag3 = 0; // tag_name="3"的ABORTED计数
+const int MAX_ABORTED_COUNT = 3;     // 最大ABORTED次数
+
 // Function declarations
 void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_name);
 void Move1goal(MoveBaseClient &ac, double x, double y, double yaw);
 void performRetryLogic(MoveBaseClient &ac, double x, double y, double yaw, const std::string &tag_name);
+void resetAbortedCounter(const std::string &tag_name);
+bool shouldSkipDueToAbortedCount(const std::string &tag_name);
 void sleep(double second)
 {
     ros::Duration(second).sleep();
+}
+
+// 重置ABORTED计数器
+void resetAbortedCounter(const std::string &tag_name)
+{
+    if (tag_name == "2")
+    {
+        aborted_counter_tag2 = 0;
+        ROS_INFO("Reset ABORTED counter for tag_name=2");
+    }
+    else if (tag_name == "3")
+    {
+        aborted_counter_tag3 = 0;
+        ROS_INFO("Reset ABORTED counter for tag_name=3");
+    }
+}
+
+// 检查是否应该因为ABORTED计数而跳过
+bool shouldSkipDueToAbortedCount(const std::string &tag_name)
+{
+    if (tag_name == "2")
+    {
+        if (aborted_counter_tag2 >= MAX_ABORTED_COUNT)
+        {
+            ROS_WARN("Tag_name=2 has reached maximum ABORTED count (%d), skipping navigation point", MAX_ABORTED_COUNT);
+            return true;
+        }
+    }
+    else if (tag_name == "3")
+    {
+        if (aborted_counter_tag3 >= MAX_ABORTED_COUNT)
+        {
+            ROS_WARN("Tag_name=3 has reached maximum ABORTED count (%d), skipping navigation point", MAX_ABORTED_COUNT);
+            return true;
+        }
+    }
+    return false;
 }
 
 // Retry logic function
@@ -49,6 +94,12 @@ void performRetryLogic(MoveBaseClient &ac, double x, double y, double yaw, const
 
 void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_name)
 {
+    // 检查是否应该因为ABORTED计数而跳过
+    if (shouldSkipDueToAbortedCount(tag_name))
+    {
+        return;
+    }
+
     tf2::Quaternion quaternion;
     quaternion.setRPY(0, 0, yaw);
     move_base_msgs::MoveBaseGoal goal;
@@ -68,11 +119,33 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
         ROS_INFO("Target point %s (%.3f, %.3f, %.3f) reached successfully!", tag_name.c_str(), x, y, yaw);
+        // 成功到达后重置计数器
+        resetAbortedCounter(tag_name);
         system(("roslaunch shoot_robot shoot_tag_" + tag_name + ".launch").c_str());
         break;
 
     case actionlib::SimpleClientGoalState::ABORTED:
         ROS_WARN("Navigation aborted - possibly due to obstacles or path planning failure");
+
+        // 对特定标签进行ABORTED计数
+        if (tag_name == "2")
+        {
+            aborted_counter_tag2++;
+            ROS_WARN("Tag_name=2 ABORTED count: %d/%d", aborted_counter_tag2, MAX_ABORTED_COUNT);
+        }
+        else if (tag_name == "3")
+        {
+            aborted_counter_tag3++;
+            ROS_WARN("Tag_name=3 ABORTED count: %d/%d", aborted_counter_tag3, MAX_ABORTED_COUNT);
+        }
+
+        // 检查是否达到最大计数
+        if (shouldSkipDueToAbortedCount(tag_name))
+        {
+            ROS_ERROR("Maximum ABORTED count reached for tag_name=%s, skipping this navigation point", tag_name.c_str());
+            return;
+        }
+
         performRetryLogic(ac, x, y, yaw, tag_name);
         break;
 
@@ -125,42 +198,42 @@ int main(int argc, char **argv)
     for (size_t i = 0; i < input.length(); ++i)
     {
         char ch = input[i];
-        if (ch=='1') 
+        if (ch == '1')
         {
             // First target point
             Move2goal(ac, 0.810, -0.890, -0.785, "1");
         }
-        else if (ch=='2')
+        else if (ch == '2')
         {
-            //Second target point
-            Move2goal(ac, 0.847, 1.483, 0.785, "1");
+            // Second target point
+            Move2goal(ac, 0.847, 1.483, 0.785, "2");
         }
-        else if (ch=='3')
+        else if (ch == '3')
         {
-            //Third target point
-            Move2goal(ac, 0.116, 1.516, 2.355, "1");
+            // Third target point
+            Move2goal(ac, 0.116, 1.516, 2.355, "3");
         }
-        else if(ch=='4')
+        else if (ch == '4')
         {
             // Fourth target point
             Move2goal(ac, 0.131, 0.799, -2.355, "1");
         }
-        else if(ch=='5')
+        else if (ch == '5')
         {
             // Fifth target point
             Move2goal(ac, 2.354, -0.062, 0.785, "1");
         }
-        else if(ch=='6')
+        else if (ch == '6')
         {
             // Sixth target point
             Move2goal(ac, 2.433, -0.767, -0.785, "1");
         }
-        else if(ch=='7')
+        else if (ch == '7')
         {
             // Seventh target point
             Move2goal(ac, 1.642, -0.817, -2.355, "1");
         }
-        else if(ch=='8')
+        else if (ch == '8')
         {
             // Eighth target point
             Move2goal(ac, 1.668, 1.529, 2.355, "1");
@@ -171,52 +244,51 @@ int main(int argc, char **argv)
         }
     }
 
-
     // Enemy base
     Move2goal(ac, 2.532, 1.404, 1.17, "3");
     shoot_close_client.call(empty_srv);
-//###############################################################
+    // ###############################################################
     input = "8";
 
     for (size_t i = 0; i < input.length(); ++i)
     {
         char ch = input[i];
-        if (ch=='1') 
+        if (ch == '1')
         {
             // First target point
             Move2goal(ac, 0.810, -0.890, -0.785, "1");
         }
-        else if (ch=='2')
+        else if (ch == '2')
         {
-            //Second target point
-            Move2goal(ac, 0.847, 1.483, 0.785, "1");
+            // Second target point
+            Move2goal(ac, 0.847, 1.483, 0.785, "2");
         }
-        else if (ch=='3')
+        else if (ch == '3')
         {
-            //Third target point
-            Move2goal(ac, 0.116, 1.516, 2.355, "1");
+            // Third target point
+            Move2goal(ac, 0.116, 1.516, 2.355, "3");
         }
-        else if(ch=='4')
+        else if (ch == '4')
         {
             // Fourth target point
             Move2goal(ac, 0.131, 0.799, -2.355, "1");
         }
-        else if(ch=='5')
+        else if (ch == '5')
         {
             // Fifth target point
             Move2goal(ac, 2.354, -0.062, 0.785, "1");
         }
-        else if(ch=='6')
+        else if (ch == '6')
         {
             // Sixth target point
             Move2goal(ac, 2.433, -0.767, -0.785, "1");
         }
-        else if(ch=='7')
+        else if (ch == '7')
         {
             // Seventh target point
             Move2goal(ac, 1.642, -0.817, -2.355, "1");
         }
-        else if(ch=='8')
+        else if (ch == '8')
         {
             // Eighth target point
             Move2goal(ac, 1.668, 1.529, 2.355, "1");
@@ -226,7 +298,7 @@ int main(int argc, char **argv)
             shoot_close_client.call(empty_srv);
         }
     }
-    
+
     // Enemy base
     Move2goal(ac, 2.532, 1.404, 1.17, "3");
     shoot_close_client.call(empty_srv);

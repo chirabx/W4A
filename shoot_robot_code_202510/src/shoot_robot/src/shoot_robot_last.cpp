@@ -23,6 +23,7 @@ void Move1goal(MoveBaseClient &ac, double x, double y, double yaw);
 void performRetryLogic(MoveBaseClient &ac, double x, double y, double yaw, const std::string &tag_name);
 void resetAbortedCounter(const std::string &tag_name);
 bool shouldSkipDueToAbortedCount(const std::string &tag_name);
+void resetAllAbortedCounters();
 void sleep(double second)
 {
     ros::Duration(second).sleep();
@@ -41,6 +42,14 @@ void resetAbortedCounter(const std::string &tag_name)
         aborted_counter_tag3 = 0;
         ROS_INFO("Reset ABORTED counter for tag_name=3");
     }
+}
+
+// 重置所有ABORTED计数器
+void resetAllAbortedCounters()
+{
+    aborted_counter_tag2 = 0;
+    aborted_counter_tag3 = 0;
+    ROS_INFO("Reset all ABORTED counters (tag2 and tag3)");
 }
 
 // 检查是否应该因为ABORTED计数而跳过
@@ -193,7 +202,10 @@ int main(int argc, char **argv)
 
     ros::Rate loop_rate(10);
 
-    string input = "172";
+    // 在开始导航序列前重置所有计数器
+    resetAllAbortedCounters();
+
+    string input = "1";
 
     for (size_t i = 0; i < input.length(); ++i)
     {
@@ -206,12 +218,12 @@ int main(int argc, char **argv)
         else if (ch == '2')
         {
             // Second target point
-            Move2goal(ac, 0.847, 1.483, 0.785, "2");
+            Move2goal(ac, 0.847, 1.483, 0.785, "1");
         }
         else if (ch == '3')
         {
             // Third target point
-            Move2goal(ac, 0.116, 1.516, 2.355, "3");
+            Move2goal(ac, 0.116, 1.516, 2.355, "1");
         }
         else if (ch == '4')
         {
@@ -248,6 +260,9 @@ int main(int argc, char **argv)
     Move2goal(ac, 2.532, 1.404, 1.17, "3");
     shoot_close_client.call(empty_srv);
     // ###############################################################
+    // 在开始第二个导航序列前重置所有计数器
+    resetAllAbortedCounters();
+
     input = "8";
 
     for (size_t i = 0; i < input.length(); ++i)
@@ -261,12 +276,12 @@ int main(int argc, char **argv)
         else if (ch == '2')
         {
             // Second target point
-            Move2goal(ac, 0.847, 1.483, 0.785, "2");
+            Move2goal(ac, 0.847, 1.483, 0.785, "1");
         }
         else if (ch == '3')
         {
             // Third target point
-            Move2goal(ac, 0.116, 1.516, 2.355, "3");
+            Move2goal(ac, 0.116, 1.516, 2.355, "1");
         }
         else if (ch == '4')
         {

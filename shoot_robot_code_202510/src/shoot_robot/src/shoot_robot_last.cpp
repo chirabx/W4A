@@ -63,7 +63,7 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
     ac.waitForResult();
 
     actionlib::SimpleClientGoalState state = ac.getState();
-
+    ROS_INFO("Current state: %s", state.toString().c_str());
     switch (state.state_)
     {
     case actionlib::SimpleClientGoalState::SUCCEEDED:
@@ -173,10 +173,10 @@ int main(int argc, char **argv)
 
 
     // Enemy base
-    Move2goal(ac, 2.552, 1.404, 1.17, "3");
+    Move2goal(ac, 2.532, 1.404, 1.17, "3");
     shoot_close_client.call(empty_srv);
 //###############################################################
-    string input = "172";
+    input = "8";
 
     for (size_t i = 0; i < input.length(); ++i)
     {
@@ -228,7 +228,7 @@ int main(int argc, char **argv)
     }
     
     // Enemy base
-    Move2goal(ac, 2.552, 1.404, 1.17, "3");
+    Move2goal(ac, 2.532, 1.404, 1.17, "3");
     shoot_close_client.call(empty_srv);
 
     return 0;

@@ -15,7 +15,7 @@ typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseCl
 // 全局变量：ABORTED状态计数器
 static int aborted_counter_tag2 = 0; // tag_name="2"的ABORTED计数
 static int aborted_counter_tag3 = 0; // tag_name="3"的ABORTED计数
-const int MAX_ABORTED_COUNT = 3;     // 最大ABORTED次数
+const int MAX_ABORTED_COUNT = 2;     // 最大ABORTED次数
 
 // Function declarations
 void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_name);
@@ -23,7 +23,6 @@ void Move1goal(MoveBaseClient &ac, double x, double y, double yaw);
 void performRetryLogic(MoveBaseClient &ac, double x, double y, double yaw, const std::string &tag_name);
 void resetAbortedCounter(const std::string &tag_name);
 bool shouldSkipDueToAbortedCount(const std::string &tag_name);
-void resetAllAbortedCounters();
 void sleep(double second)
 {
     ros::Duration(second).sleep();
@@ -42,14 +41,6 @@ void resetAbortedCounter(const std::string &tag_name)
         aborted_counter_tag3 = 0;
         ROS_INFO("Reset ABORTED counter for tag_name=3");
     }
-}
-
-// 重置所有ABORTED计数器
-void resetAllAbortedCounters()
-{
-    aborted_counter_tag2 = 0;
-    aborted_counter_tag3 = 0;
-    ROS_INFO("Reset all ABORTED counters (tag2 and tag3)");
 }
 
 // 检查是否应该因为ABORTED计数而跳过
@@ -158,26 +149,6 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
         performRetryLogic(ac, x, y, yaw, tag_name);
         break;
 
-    case actionlib::SimpleClientGoalState::PREEMPTED:
-        ROS_WARN("Navigation preempted - possibly due to new target point");
-        performRetryLogic(ac, x, y, yaw, tag_name);
-        break;
-
-    case actionlib::SimpleClientGoalState::REJECTED:
-        ROS_ERROR("Target point rejected - possibly invalid target point %s (%.3f, %.3f, %.3f)", tag_name.c_str(), x, y, yaw);
-        ROS_WARN("Skipping current target point, continuing to next target");
-        return;
-
-    case actionlib::SimpleClientGoalState::RECALLED:
-        ROS_WARN("Target cancelled");
-        performRetryLogic(ac, x, y, yaw, tag_name);
-        break;
-
-    case actionlib::SimpleClientGoalState::LOST:
-        ROS_ERROR("Communication lost with move_base server");
-        ROS_ERROR("Program will exit, please check move_base node status");
-        return;
-
     default:
         ROS_ERROR("Unknown navigation state: %s", state.toString().c_str());
         performRetryLogic(ac, x, y, yaw, tag_name);
@@ -201,9 +172,6 @@ int main(int argc, char **argv)
     ac.waitForServer();
 
     ros::Rate loop_rate(10);
-
-    // 在开始导航序列前重置所有计数器
-    resetAllAbortedCounters();
 
     string input = "1";
 
@@ -260,8 +228,6 @@ int main(int argc, char **argv)
     Move2goal(ac, 2.532, 1.404, 1.17, "3");
     shoot_close_client.call(empty_srv);
     // ###############################################################
-    // 在开始第二个导航序列前重置所有计数器
-    resetAllAbortedCounters();
 
     input = "8";
 
@@ -313,6 +279,9 @@ int main(int argc, char **argv)
             shoot_close_client.call(empty_srv);
         }
     }
+
+    // 重置tag="3"的计数器，为第二次尝试做准备
+    resetAbortedCounter("3");
 
     // Enemy base
     Move2goal(ac, 2.532, 1.404, 1.17, "3");

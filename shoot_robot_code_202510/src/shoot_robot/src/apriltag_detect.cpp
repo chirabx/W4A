@@ -23,7 +23,7 @@ private:
     bool should_exit_ = false;
     bool is_backing_up_ = false;
     ros::Time backup_start_time_;
-    const double backup_duration_ = 5.0; // 后退持续时间（秒）
+    const double backup_duration_ = 3.0; // 后退持续时间（秒）
 
     std_srvs::Empty empty_srv;
 
@@ -51,7 +51,6 @@ public:
         {
             if (detection.id[0] == tag_id)
             {
-
                 double current_x = detection.pose.pose.pose.position.x;
                 ROS_INFO("The current x position is %f", current_x);
                 double current_z = detection.pose.pose.pose.position.z;
@@ -60,15 +59,27 @@ public:
                 if ((fabs(current_x) < target_x_tolerance) && (fabs(current_z - z_target_distance) < target_z_tolerance))
                 {
                     shoot_client.call(empty_srv);
-                    cmd_vel.angular.z = -0.1;
                     cmd_vel.linear.x = 0;
-                    int count = 0;
                     ros::Rate loop_rate(10);
-                    while (ros::ok() && count < 20)
+
+                    //向右
+                    cmd_vel.angular.z = -0.1;
+                    int count = 0;
+                    while (ros::ok() && count < 5)
                     {
                         ROS_INFO("shoot");
                         cmd_vel_pub_.publish(cmd_vel);
-                        ros::spinOnce();
+                        loop_rate.sleep();
+                        count++;
+                    }
+
+                    //向左
+                    cmd_vel.angular.z = 0.1;
+                    count = 0;
+                    while (ros::ok() && count < 10)
+                    {
+                        ROS_INFO("shoot");
+                        cmd_vel_pub_.publish(cmd_vel);
                         loop_rate.sleep();
                         count++;
                     }
@@ -77,7 +88,6 @@ public:
                     ros::shutdown(); // 终止ROS通信
                     return;          // 直接退出回调函数
                 }
-
                 else if (fabs(current_x) > target_x_tolerance)
                 {
                     if (fabs(fabs(current_x) - target_x_tolerance) < 0.0065)
@@ -143,9 +153,6 @@ public:
         stop_cmd.angular.z = 0;
         cmd_vel_pub_.publish(stop_cmd);
 
-        // 这里可以添加执行下个任务的具体逻辑
-        // 例如：发布任务完成消息、调用其他服务、或退出程序等
-
         // 示例：退出程序
         should_exit_ = true;
         ros::shutdown();
@@ -158,7 +165,6 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "apriltag_controller");
     AprilTagController controller;
-    // 非阻塞式循环
     ros::Rate loop_rate(10); // 控制循环频率（10Hz）
     while (ros::ok())
     {

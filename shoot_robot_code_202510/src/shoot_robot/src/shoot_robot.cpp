@@ -29,12 +29,11 @@ void performRetryLogic(MoveBaseClient &ac, double x, double y, double yaw, const
     ros::Rate loop_rate(10);
 
     ROS_INFO("Executing backward retry logic...");
-    vel_msg.linear.x = -0.05; // Backward speed
+    vel_msg.linear.x = -0.05;
     count = 0;
-    while (ros::ok() && count < 30) // Backward 30 steps
+    while (ros::ok() && count < 10)
     {
         pub.publish(vel_msg);
-        ros::spinOnce();
         loop_rate.sleep();
         count++;
     }
@@ -74,31 +73,6 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
         ROS_WARN("Navigation aborted - possibly due to obstacles or path planning failure");
         performRetryLogic(ac, x, y, yaw, tag_name);
         break;
-
-    case actionlib::SimpleClientGoalState::PREEMPTED:
-        ROS_WARN("Navigation preempted - possibly due to new target point");
-        performRetryLogic(ac, x, y, yaw, tag_name);
-        break;
-
-    case actionlib::SimpleClientGoalState::REJECTED:
-        ROS_ERROR("Target point rejected - possibly invalid target point %s (%.3f, %.3f, %.3f)", tag_name.c_str(), x, y, yaw);
-        ROS_WARN("Skipping current target point, continuing to next target");
-        return;
-
-    case actionlib::SimpleClientGoalState::RECALLED:
-        ROS_WARN("Target cancelled");
-        performRetryLogic(ac, x, y, yaw, tag_name);
-        break;
-
-    case actionlib::SimpleClientGoalState::LOST:
-        ROS_ERROR("Communication lost with move_base server");
-        ROS_ERROR("Program will exit, please check move_base node status");
-        return;
-
-    default:
-        ROS_ERROR("Unknown navigation state: %s", state.toString().c_str());
-        performRetryLogic(ac, x, y, yaw, tag_name);
-        break;
     }
     // sleep(0.5);
 }
@@ -120,18 +94,18 @@ int main(int argc, char **argv)
 
     int count = 0;
     ros::Rate loop_rate(10);
-
+    shoot_close_client.call(empty_srv);
 
     // First target point
-    Move2goal(ac, 0.810, -0.890, -0.785, "1");
+    Move2goal(ac, 0.840, -0.820, -0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // //Second target point
-    Move2goal(ac, 0.847, 1.483, 0.785, "1");
+    Move2goal(ac, 0.837, 1.463, 0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // //Third target point
-    Move2goal(ac, 0.116, 1.516, 2.355, "1");
+    Move2goal(ac, 0.156, 1.556, 2.355, "1");
     shoot_close_client.call(empty_srv);
 
     // Fourth target point
@@ -139,24 +113,23 @@ int main(int argc, char **argv)
     shoot_close_client.call(empty_srv);
 
     // Fifth target point
-    Move2goal(ac, 2.354, -0.062, 0.785, "1");
+    Move2goal(ac, 2.364, -0.092, 0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // Sixth target point
-    Move2goal(ac, 2.433, -0.767, -0.785, "1");
+    Move2goal(ac, 2.423, -0.837, -0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // Seventh target point
-    Move2goal(ac, 1.642, -0.817, -2.355, "1");
+    Move2goal(ac, 1.662, -0.797, -2.355, "1");
     shoot_close_client.call(empty_srv);
 
     // Eighth target point
-    Move2goal(ac, 1.668, 1.529, 2.355, "1");
-    shoot_close_client.call(empty_srv);
+    Move2goal(ac, 1.668, 1.489, 2.355, "1");
+    // shoot_close_client.call(empty_srv);
 
     // Enemy base
-    // Move2goal(ac, 2.375, 1.431, 0.700, "2");
-    Move2goal(ac, 2.392, 1.534, 0.785, "3");
+    Move2goal(ac, 2.412, 1.544, 0.785, "3");
     // shoot_close_client.call(empty_srv);
 
     return 0;

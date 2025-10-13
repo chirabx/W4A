@@ -1,5 +1,11 @@
 {
     "files.associations": {
-        "string": "cpp"
+        "string": "cpp",
+        "array": "cpp",
+        "tuple": "cpp",
+        "utility": "cpp",
+        "string_view": "cpp",
+        "cmath": "cpp",
+        "complex": "cpp"
     }
 }

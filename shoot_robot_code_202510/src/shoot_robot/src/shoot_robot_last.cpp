@@ -15,7 +15,9 @@ typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseCl
 // 全局变量：ABORTED状态计数器
 static int aborted_counter_tag2 = 0; // tag_name="2"的ABORTED计数
 static int aborted_counter_tag3 = 0; // tag_name="3"的ABORTED计数
+static int aborted_counter_tag1 = 0; // tag_name="1"的ABORTED计数
 const int MAX_ABORTED_COUNT = 1;     // 最大ABORTED次数
+const int MAX_ABORTED_COUNT1 = 2;     // 最大ABORTED次数
 
 // Function declarations
 void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_name);
@@ -41,6 +43,11 @@ void resetAbortedCounter(const std::string &tag_name)
         aborted_counter_tag3 = 0;
         ROS_INFO("Reset ABORTED counter for tag_name=3");
     }
+    else if (tag_name == "1")
+    {
+        aborted_counter_tag1 = 0;
+        ROS_INFO("Reset ABORTED counter for tag_name=1");
+    }
 }
 
 // 检查是否应该因为ABORTED计数而跳过
@@ -59,6 +66,14 @@ bool shouldSkipDueToAbortedCount(const std::string &tag_name)
         if (aborted_counter_tag3 >= MAX_ABORTED_COUNT)
         {
             ROS_WARN("Tag_name=3 has reached maximum ABORTED count (%d), skipping navigation point", MAX_ABORTED_COUNT);
+            return true;
+        }
+    }
+    else if (tag_name == "1")
+    {
+        if (aborted_counter_tag1 >= 2)
+        {
+            ROS_WARN("Tag_name=1 has reached maximum ABORTED count (%d), skipping navigation point", MAX_ABORTED_COUNT1);
             return true;
         }
     }
@@ -89,6 +104,23 @@ void performRetryLogic(MoveBaseClient &ac, double x, double y, double yaw, const
 
     ROS_INFO("Retrying to move to target point (%.3f, %.3f, %.3f)", x, y, yaw);
     Move2goal(ac, x, y, yaw, tag_name);
+}
+
+void Move1goal(MoveBaseClient &ac, double x, double y, double yaw)
+{
+    tf2::Quaternion quaternion;
+    quaternion.setRPY(0, 0, yaw);
+    move_base_msgs::MoveBaseGoal goal;
+    goal.target_pose.pose.position.x = x;
+    goal.target_pose.pose.position.y = y;
+    goal.target_pose.pose.orientation.z = quaternion.z();
+    goal.target_pose.pose.orientation.w = quaternion.w();
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.header.stamp = ros::Time::now();
+    ac.sendGoal(goal);
+    ROS_INFO("MoveBase Send Goal !!!");
+    ac.waitForResult();
+
 }
 
 void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_name)
@@ -137,7 +169,11 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
             aborted_counter_tag3++;
             ROS_WARN("Tag_name=3 ABORTED count: %d/%d", aborted_counter_tag3, MAX_ABORTED_COUNT);
         }
-
+        else if (tag_name == "1")
+        {
+            aborted_counter_tag1++;
+            ROS_WARN("Tag_name=1 ABORTED count: %d/%d", aborted_counter_tag1, MAX_ABORTED_COUNT);
+        }
         // 检查是否达到最大计数
         if (shouldSkipDueToAbortedCount(tag_name))
         {
@@ -166,8 +202,10 @@ int main(int argc, char **argv)
 
     ros::Rate loop_rate(10);
 
-    string input = "123";
-
+    string input = "15672348";
+    // string input = "12345678";
+    shoot_close_client.call(empty_srv);
+    int count_tag = 0;
     for (size_t i = 0; i < input.length(); ++i)
     {
         char ch = input[i];
@@ -211,12 +249,32 @@ int main(int argc, char **argv)
             // Eighth target point
             Move2goal(ac, 1.668, 1.489, 2.355, "1");
         }
-        if (i != input.length()-1)
+        std::string exit_status;
+        while (ros::ok()) {
+            if (ros::param::get("/apriltag_exit_status", exit_status)) {
+                if (exit_status == "normal_exit") {
+                    ROS_INFO("Child node exits state: %s", exit_status.c_str());
+                    count_tag++;
+                    break;
+                }
+                else if (exit_status == "unnormal_exit") {
+                    ROS_INFO("This apriltag is already shoot");
+                    break;
+                }
+            }
+            ros::Duration(0.1).sleep(); // 100ms检查一次
+        }
+        if (count_tag == 3) {
+            ROS_INFO("count_tag == 3");
+            break;
+        }
+        else 
         {
             shoot_close_client.call(empty_srv);
         }
     }
 
+    Move1goal(ac, 2.0, 0.7, 0.5);
     // Enemy base
     Move2goal(ac, 2.512, 1.404, 1.17, "2");
     shoot_close_client.call(empty_srv);
@@ -224,10 +282,12 @@ int main(int argc, char **argv)
     // 重置tag计数器，为第二次尝试做准备
     resetAbortedCounter("3");
     resetAbortedCounter("2");
+    resetAbortedCounter("1");
     // ###############################################################
 
-    input = "8";
-
+    input = "75684321";
+    input = "42387651";
+    count_tag = 0;
     for (size_t i = 0; i < input.length(); ++i)
     {
         char ch = input[i];
@@ -271,15 +331,32 @@ int main(int argc, char **argv)
             // Eighth target point
             Move2goal(ac, 1.668, 1.489, 2.355, "1");
         }
-        if (i != input.length()-1)
+        std::string exit_status;
+        while (ros::ok()) {
+            if (ros::param::get("/apriltag_exit_status", exit_status)) {
+                if (exit_status == "normal_exit") 
+                {
+                    ROS_INFO("Child node exits state: %s", exit_status.c_str());
+                    count_tag++;
+                    break;
+                }
+                else if (exit_status == "unnormal_exit") 
+                {
+                    ROS_INFO("This apriltag is already shoot");
+                    break;
+                }
+            }
+            ros::Duration(0.1).sleep(); // 100ms检查一次
+        }
+        if (count_tag == 1 )
         {
-            shoot_close_client.call(empty_srv);
+            ROS_INFO("add one tag !!!");
+            break;
         }
     }
-
+    Move1goal(ac, 2.0, 0.7, 0.5);
     // Enemy base
     Move2goal(ac, 2.512, 1.404, 1.17, "2");
-    shoot_close_client.call(empty_srv);
 
     return 0;
 }

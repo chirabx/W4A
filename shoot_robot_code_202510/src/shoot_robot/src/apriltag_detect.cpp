@@ -23,7 +23,7 @@ private:
     bool should_exit_ = false;
     bool is_backing_up_ = false;
     ros::Time backup_start_time_;
-    const double backup_duration_ = 3.0; // 后退持续时间（秒）
+    const double backup_duration_ = 2.0; // 后退持续时间（秒）
 
     std_srvs::Empty empty_srv;
 
@@ -85,6 +85,7 @@ public:
                     }
 
                     should_exit_ = true;
+                    ros::param::set("/apriltag_exit_status", "normal_exit");
                     ros::shutdown(); // 终止ROS通信
                     return;          // 直接退出回调函数
                 }
@@ -123,12 +124,13 @@ public:
             {
                 ROS_INFO("Backup time reached, executing next task");
                 executeNextTask();
+                ros::param::set("/apriltag_exit_status", "unnormal_exit");
                 return;
             }
 
             // 继续后退
             ROS_INFO("Backing up... %.1f seconds elapsed", backup_elapsed.toSec());
-            cmd_vel.linear.x = -0.1;
+            cmd_vel.linear.x = -0.05;
             cmd_vel.angular.z = 0;
         }
         else

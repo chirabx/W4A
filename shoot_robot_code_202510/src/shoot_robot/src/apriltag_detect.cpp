@@ -84,6 +84,19 @@ public:
                         count++;
                     }
 
+                    // back
+                    cmd_vel.linear.x = -0.07;
+                    count = 0;
+                    while (ros::ok() && count < 10)
+                    {
+                        cmd_vel_pub_.publish(cmd_vel);
+                        loop_rate.sleep();
+                        count++;
+                    }
+                    // Stop
+                    cmd_vel.linear.x = 0.0;
+                    cmd_vel_pub_.publish(cmd_vel);
+
                     should_exit_ = true;
                     ros::param::set("/apriltag_exit_status", "normal_exit");
                     ros::shutdown(); // 终止ROS通信

@@ -16,8 +16,8 @@ typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseCl
 static int aborted_counter_tag2 = 0; // tag_name="2"的ABORTED计数
 static int aborted_counter_tag3 = 0; // tag_name="3"的ABORTED计数
 static int aborted_counter_tag1 = 0; // tag_name="1"的ABORTED计数
-const int MAX_ABORTED_COUNT = 1;     // 最大ABORTED次数
-const int MAX_ABORTED_COUNT1 = 2;     // 最大ABORTED次数
+const int MAX_ABORTED_COUNT = 100;     // 最大ABORTED次数
+const int MAX_ABORTED_COUNT1 = 100;     // 最大ABORTED次数
 
 // Function declarations
 void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_name);
@@ -103,7 +103,7 @@ void performRetryLogic(MoveBaseClient &ac, double x, double y, double yaw, const
     pub.publish(vel_msg);
 
     ROS_INFO("Retrying to move to target point (%.3f, %.3f, %.3f)", x, y, yaw);
-    Move2goal(ac, x, y, yaw, tag_name);
+    Move1goal(ac, x, y, yaw);
 }
 
 void Move1goal(MoveBaseClient &ac, double x, double y, double yaw)
@@ -121,6 +121,16 @@ void Move1goal(MoveBaseClient &ac, double x, double y, double yaw)
     ROS_INFO("MoveBase Send Goal !!!");
     ac.waitForResult();
 
+    actionlib::SimpleClientGoalState state = ac.getState();
+    ROS_INFO("Current state: %s", state.toString().c_str());
+    switch (state.state_)
+    {
+    case actionlib::SimpleClientGoalState::ABORTED:
+        ROS_WARN("Navigation aborted - possibly due to obstacles or path planning failure");
+        performRetryLogic(ac, x, y, yaw, "1");
+        break;
+    }
+    // sleep(0.5);
 }
 
 void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_name)
@@ -190,173 +200,350 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "shoot_robot_base");
     ros::NodeHandle nh;
+    ros::NodeHandle nh_;
 
     geometry_msgs::Twist vel_msg;
     ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
     ros::ServiceClient shoot_close_client;
+    ros::ServiceClient shoot_client;
     std_srvs::Empty empty_srv;
 
     shoot_close_client = nh.serviceClient<std_srvs::Empty>("/close");
+    shoot_client = nh_.serviceClient<std_srvs::Empty>("/shoot");
     MoveBaseClient ac("move_base", true);
     ac.waitForServer();
-
     ros::Rate loop_rate(10);
+    int count = 0;
 
-    string input = "15672348";
-    // string input = "12345678";
-    shoot_close_client.call(empty_srv);
-    int count_tag = 0;
-    for (size_t i = 0; i < input.length(); ++i)
+    shoot_client.call(empty_srv);
+    vel_msg.linear.y = 0.20; // Backward speed
+    count = 0;
+    loop_rate.sleep();
+    while (ros::ok() && count < 10) // Backward 30 steps
     {
-        char ch = input[i];
-        if (ch == '1')
-        {
-            // First target point
-            Move2goal(ac, 0.840, -0.820, -0.785, "1");
-        }
-        else if (ch == '2')
-        {
-            // Second target point
-            Move2goal(ac, 0.837, 1.463, 0.785, "1");
-        }
-        else if (ch == '3')
-        {
-            // Third target point
-            Move2goal(ac, 0.156, 1.556, 2.355, "1");
-        }
-        else if (ch == '4')
-        {
-            // Fourth target point
-            Move2goal(ac, 0.131, 0.799, -2.355, "1");
-        }
-        else if (ch == '5')
-        {
-            // Fifth target point
-            Move2goal(ac, 2.364, -0.092, 0.785, "1");
-        }
-        else if (ch == '6')
-        {
-            // Sixth target point
-            Move2goal(ac, 2.423, -0.837, -0.785, "1");
-        }
-        else if (ch == '7')
-        {
-            // Seventh target point
-            Move2goal(ac, 1.662, -0.797, -2.355, "1");
-        }
-        else if (ch == '8')
-        {
-            // Eighth target point
-            Move2goal(ac, 1.668, 1.489, 2.355, "1");
-        }
-        std::string exit_status;
-        while (ros::ok()) {
-            if (ros::param::get("/apriltag_exit_status", exit_status)) {
-                if (exit_status == "normal_exit") {
-                    ROS_INFO("Child node exits state: %s", exit_status.c_str());
-                    count_tag++;
-                    break;
-                }
-                else if (exit_status == "unnormal_exit") {
-                    ROS_INFO("This apriltag is already shoot");
-                    break;
-                }
-            }
-            ros::Duration(0.1).sleep(); // 100ms检查一次
-        }
-        if (count_tag == 3) {
-            ROS_INFO("count_tag == 3");
-            break;
-        }
-        else 
-        {
-            shoot_close_client.call(empty_srv);
-        }
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.y = 0.0;
+    pub.publish(vel_msg);
+
+    sleep(0.5);
+
+   vel_msg.linear.x = 1.20; // Backward speed
+    count = 0;
+    while (ros::ok() && count < 60) // Backward 30 steps
+    {
+        ROS_INFO("go");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+
+    // Eighth target point!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    Move1goal(ac, 1.688, 1.449, 2.355);
+
+    //向右
+    vel_msg.angular.z = -0.1;
+    count = 0;
+    while (ros::ok() && count < 15)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向左
+    vel_msg.angular.z = 0.1;
+    count = 0;
+    while (ros::ok() && count < 30)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
     }
 
-    Move1goal(ac, 2.0, 0.7, 0.5);
-    // Enemy base
-    Move2goal(ac, 2.512, 1.404, 1.17, "2");
-    shoot_close_client.call(empty_srv);
+    Move1goal(ac, 2.2, 0.9, 0.5);
+    // Enemy base!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    Move1goal(ac, 2.482, 1.044, 1.37);
 
-    // 重置tag计数器，为第二次尝试做准备
-    resetAbortedCounter("3");
-    resetAbortedCounter("2");
-    resetAbortedCounter("1");
-    // ###############################################################
+    sleep(0.5);
 
-    input = "75684321";
-    input = "42387651";
-    count_tag = 0;
-    for (size_t i = 0; i < input.length(); ++i)
+    vel_msg.linear.y = -0.15; // Backward speed
+    count = 0;
+    while (ros::ok() && count < 20) // Backward 30 steps
     {
-        char ch = input[i];
-        if (ch == '1')
-        {
-            // First target point
-            Move2goal(ac, 0.840, -0.820, -0.785, "1");
-        }
-        else if (ch == '2')
-        {
-            // Second target point
-            Move2goal(ac, 0.837, 1.463, 0.785, "1");
-        }
-        else if (ch == '3')
-        {
-            // Third target point
-            Move2goal(ac, 0.156, 1.556, 2.355, "1");
-        }
-        else if (ch == '4')
-        {
-            // Fourth target point
-            Move2goal(ac, 0.131, 0.799, -2.355, "1");
-        }
-        else if (ch == '5')
-        {
-            // Fifth target point
-            Move2goal(ac, 2.364, -0.092, 0.785, "1");
-        }
-        else if (ch == '6')
-        {
-            // Sixth target point
-            Move2goal(ac, 2.423, -0.837, -0.785, "1");
-        }
-        else if (ch == '7')
-        {
-            // Seventh target point
-            Move2goal(ac, 1.662, -0.797, -2.355, "1");
-        }
-        else if (ch == '8')
-        {
-            // Eighth target point
-            Move2goal(ac, 1.668, 1.489, 2.355, "1");
-        }
-        std::string exit_status;
-        while (ros::ok()) {
-            if (ros::param::get("/apriltag_exit_status", exit_status)) {
-                if (exit_status == "normal_exit") 
-                {
-                    ROS_INFO("Child node exits state: %s", exit_status.c_str());
-                    count_tag++;
-                    break;
-                }
-                else if (exit_status == "unnormal_exit") 
-                {
-                    ROS_INFO("This apriltag is already shoot");
-                    break;
-                }
-            }
-            ros::Duration(0.1).sleep(); // 100ms检查一次
-        }
-        if (count_tag == 1 )
-        {
-            ROS_INFO("add one tag !!!");
-            break;
-        }
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
     }
-    Move1goal(ac, 2.0, 0.7, 0.5);
-    // Enemy base
-    Move2goal(ac, 2.512, 1.404, 1.17, "2");
+    // Stop
+    vel_msg.linear.y = 0.0;
+    pub.publish(vel_msg);
 
-    return 0;
+    sleep(0.5);
+
+    vel_msg.linear.x = 0.10; // Backward speed
+    count = 0;
+    while (ros::ok() && count < 10) // Backward 30 steps
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+
+    //向右
+    vel_msg.angular.z = -0.15;
+    count = 0;
+    while (ros::ok() && count < 15)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向左
+    vel_msg.angular.z = 0.15;
+    count = 0;
+    while (ros::ok() && count < 30)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.angular.z = 0.0;
+    pub.publish(vel_msg);
+
+//!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    //向右
+    vel_msg.angular.z = -0.15;
+    count = 0;
+    while (ros::ok() && count < 45)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向左
+    vel_msg.angular.z = 0.15;
+    count = 0;
+    while (ros::ok() && count < 60)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向右
+    vel_msg.angular.z = -0.15;
+    count = 0;
+    while (ros::ok() && count < 60)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向左
+    vel_msg.angular.z = 0.15;
+    count = 0;
+    while (ros::ok() && count < 30)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.angular.z = 0.0;
+    pub.publish(vel_msg);
+
+    // 后撤准备补
+    vel_msg.linear.x = -0.15;
+    count = 0;
+    while (ros::ok() && count < 10)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+    // 左移准备补
+    vel_msg.linear.y = 0.15;
+    count = 0;
+    while (ros::ok() && count < 10)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    vel_msg.linear.y = 0.0;
+    pub.publish(vel_msg);
+    //射击准备
+    Move1goal(ac, 2.2, 0.9, 0.5);
+    
+    // Fifth target point#####################################################
+    Move1goal(ac, 2.244, -0.138, 0.785);
+
+    //向右
+    vel_msg.angular.z = -0.1;
+    count = 0;
+    while (ros::ok() && count < 15)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向左
+    vel_msg.angular.z = 0.1;
+    count = 0;
+    while (ros::ok() && count < 30)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+
+   vel_msg.linear.x = -0.50; // Backward speed
+    count = 0;
+    while (ros::ok() && count < 10) // Backward 30 steps
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+
+    sleep(0.5);
+
+   vel_msg.linear.y = 0.40; // Backward speed
+    count = 0;
+    while (ros::ok() && count < 10) // Backward 30 steps
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.y = 0.0;
+    pub.publish(vel_msg);
+
+    Move1goal(ac, 2.2, 0.9, 0.5);
+    // Enemy base#####################################################
+    Move1goal(ac, 2.482, 1.044, 1.37);
+
+    sleep(0.5);
+
+    vel_msg.linear.y = -0.15; // Backward speed
+    count = 0;
+    while (ros::ok() && count < 20) // Backward 30 steps
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.y = 0.0;
+    pub.publish(vel_msg);
+
+    sleep(0.5);
+
+    vel_msg.linear.x = 0.10; // Backward speed
+    count = 0;
+    while (ros::ok() && count < 10) // Backward 30 steps
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+
+    //向右
+    vel_msg.angular.z = -0.15;
+    count = 0;
+    while (ros::ok() && count < 15)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向左
+    vel_msg.angular.z = 0.15;
+    count = 0;
+    while (ros::ok() && count < 30)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.angular.z = 0.0;
+    pub.publish(vel_msg);
+
+//#####################################################
+    //向右
+    vel_msg.angular.z = -0.15;
+    count = 0;
+    while (ros::ok() && count < 45)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向左
+    vel_msg.angular.z = 0.15;
+    count = 0;
+    while (ros::ok() && count < 60)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向右
+    vel_msg.angular.z = -0.15;
+    count = 0;
+    while (ros::ok() && count < 60)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    //向左
+    vel_msg.angular.z = 0.15;
+    count = 0;
+    while (ros::ok() && count < 60)
+    {
+        ROS_INFO("shoot");
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.angular.z = 0.0;
+    pub.publish(vel_msg);
 }

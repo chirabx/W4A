@@ -6,6 +6,9 @@
         "utility": "cpp",
         "string_view": "cpp",
         "cmath": "cpp",
-        "complex": "cpp"
+        "complex": "cpp",
+        "bitset": "cpp",
+        "chrono": "cpp",
+        "algorithm": "cpp"
     }
 }

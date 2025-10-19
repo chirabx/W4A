@@ -77,6 +77,22 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
     // sleep(0.5);
 }
 
+void Move1goal(MoveBaseClient &ac, double x, double y, double yaw)
+{
+    tf2::Quaternion quaternion;
+    quaternion.setRPY(0, 0, yaw);
+    move_base_msgs::MoveBaseGoal goal;
+    goal.target_pose.pose.position.x = x;
+    goal.target_pose.pose.position.y = y;
+    goal.target_pose.pose.orientation.z = quaternion.z();
+    goal.target_pose.pose.orientation.w = quaternion.w();
+    goal.target_pose.header.frame_id = "map";
+    goal.target_pose.header.stamp = ros::Time::now();
+    ac.sendGoal(goal);
+    ROS_INFO("MoveBase Send Goal !!!");
+    ac.waitForResult();
+    // sleep(0.5);
+}
 
 int main(int argc, char **argv)
 {
@@ -97,39 +113,92 @@ int main(int argc, char **argv)
     shoot_close_client.call(empty_srv);
 
     // First target point
-    Move2goal(ac, 0.840, -0.820, -0.785, "1");
+    Move2goal(ac, 0.93, -0.90, -0.785, "1");
     shoot_close_client.call(empty_srv);
+
+    Move1goal(ac, 0.877, 0.3, 1.57);
 
     // //Second target point
-    Move2goal(ac, 0.837, 1.463, 0.785, "1");
+    Move2goal(ac, 0.887, 1.53, 0.785, "1");
     shoot_close_client.call(empty_srv);
 
+    vel_msg.linear.x = -0.05;
+    count = 0;
+    while (ros::ok() && count < 20)
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+
     // //Third target point
-    Move2goal(ac, 0.156, 1.556, 2.355, "1");
+    Move2goal(ac, 0.086, 1.506, 2.355, "1");
     shoot_close_client.call(empty_srv);
 
     // Fourth target point
-    Move2goal(ac, 0.131, 0.799, -2.355, "1");
+    Move2goal(ac, 0.151, 0.779, -2.355, "1");
     shoot_close_client.call(empty_srv);
+
+    vel_msg.linear.x = -0.05;
+    count = 0;
+    while (ros::ok() && count < 10)
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+
+    Move1goal(ac, 1.100, 0.400, 0);
 
     // Fifth target point
-    Move2goal(ac, 2.364, -0.092, 0.785, "1");
+    Move2goal(ac, 2.394, -0.078, 0.785, "1");
     shoot_close_client.call(empty_srv);
 
-    // Sixth target point
-    Move2goal(ac, 2.423, -0.837, -0.785, "1");
-    shoot_close_client.call(empty_srv);
+    vel_msg.linear.x = -0.05;
+    count = 0;
+    while (ros::ok() && count < 20)
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+
+    // // Sixth target point
+    // Move2goal(ac, 2.423, -0.827, -0.785, "1");
+    // shoot_close_client.call(empty_srv);
 
     // Seventh target point
-    Move2goal(ac, 1.662, -0.797, -2.355, "1");
+    Move2goal(ac, 1.622, -0.797, -2.355, "1");
     shoot_close_client.call(empty_srv);
 
+    vel_msg.linear.x = -0.05;
+    count = 0;
+    while (ros::ok() && count < 30)
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+        count++;
+    }
+    // Stop
+    vel_msg.linear.x = 0.0;
+    pub.publish(vel_msg);
+
     // Eighth target point
-    Move2goal(ac, 1.668, 1.489, 2.355, "1");
+    Move2goal(ac, 1.658, 1.519, 2.355, "1");
     // shoot_close_client.call(empty_srv);
 
     // Enemy base
-    Move2goal(ac, 2.412, 1.544, 0.785, "3");
+    // Move2goal(ac, 2.412, 1.544, 0.785, "3");
+    Move2goal(ac, 2.432, 1.454, 0.785, "3");
     // shoot_close_client.call(empty_srv);
 
     return 0;

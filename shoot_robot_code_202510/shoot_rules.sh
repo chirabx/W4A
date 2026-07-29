@@ -4,7 +4,7 @@
 sudo rm -f /etc/udev/rules.d/shoot.rules 
 
 # 复制新规则文件到目标目录
-sudo cp /home/bcsh/clean_robot_code/shoot.rules /etc/udev/rules.d/
+sudo cp /home/bcsh/W4A/shoot_robot_code_202510/shoot.rules /etc/udev/rules.d/
 
 # 重新加载udev规则（确保新规则生效）
 sudo udevadm control --reload-rules

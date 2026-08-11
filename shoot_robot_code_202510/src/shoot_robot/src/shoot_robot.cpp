@@ -135,8 +135,8 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(10);
     shoot_close_client.call(empty_srv);
 
-    Move_safe(pub, 0.0, 0.4, 22);
-    Move_safe(pub, 0.4, 0.0, 30);
+    // Move_safe(pub, 0.0, 0.4, 22);
+    // Move_safe(pub, 0.4, 0.0, 30);
    
 
     // First target point G
@@ -160,15 +160,15 @@ int main(int argc, char **argv)
     // pub.publish(vel_msg);
 
     // //Third target point I
-    Move2goal(ac, 1.685, 0.1, -2.355, "1");
+    Move2goal(ac, 1.67, 0.05, -2.355, "1");
     shoot_close_client.call(empty_srv);
     
     // Fourth target point
-    Move2goal(ac, 1.51, 2.48, 2.355, "1");
+    Move2goal(ac, 1.53, 2.42, 2.355, "1");
     shoot_close_client.call(empty_srv);
     
     // Fifth target point
-    Move2goal(ac, 2.45, 2.41, 0.785, "1");//(2.5,2.41,0.785)
+    Move2goal(ac, 2.45, 2.39, 0.785, "1");//(2.5,2.41,0.785)
     shoot_close_client.call(empty_srv);
     
     // Sixth target point

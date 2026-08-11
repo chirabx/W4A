@@ -1,226 +1,192 @@
 #include <ros/ros.h>
-#include <move_base_msgs/MoveBaseAction.h>
-#include <actionlib/client/simple_action_client.h>
-#include <iostream>
-#include <geometry_msgs/Quaternion.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <std_srvs/Empty.h>
+#include <apriltag_ros/AprilTagDetectionArray.h>
 #include <geometry_msgs/Twist.h>
+#include <std_srvs/Empty.h>
 
-using namespace std;
-
-typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
-// Function declarations
-void Move2goal(MoveBaseClient &ac, ros::Publisher &pub,double x, double y, double yaw, string tag_name);
-void Move1goal(MoveBaseClient &ac, double x, double y, double yaw);
-void performRetryLogic(MoveBaseClient &ac, ros::Publisher &pub, double x, double y, double yaw, const std::string &tag_name);
-void sleep(double second)
+class AprilTagController
 {
-    ros::Duration(second).sleep();
-}
+private:
+    ros::NodeHandle nh_;
+    ros::NodeHandle private_nh_;
 
-// Retry logic function
-void performRetryLogic(MoveBaseClient &ac, ros::Publisher &pub, double x, double y, double yaw, const std::string &tag_name)
-{
-    ros::NodeHandle nh;
-    geometry_msgs::Twist vel_msg;
-    int count = 0;
-    ros::Rate loop_rate(10);
+    ros::Subscriber tag_sub_;
+    ros::Publisher cmd_vel_pub_;
+    ros::ServiceClient shoot_client;
 
-    ROS_INFO("Executing backward retry logic...");
-    vel_msg.linear.x = -0.2;//0.05
-    count = 0;
-    while (ros::ok() && count < 15)
+    // PID控制参数
+    const double Kp = 5;                    // 比例系数
+    const double target_x_tolerance = 0.01; // X轴位置容忍误差
+
+    const double z_target_distance = 0.114;
+    const double target_z_tolerance = 0.02;
+
+    bool should_exit_ = false;
+    bool is_backing_up_ = false;
+    ros::Time backup_start_time_;
+    const double backup_duration_ = 2.0; // 后退持续时间（秒）
+
+    std_srvs::Empty empty_srv;
+
+    // 在参数中加载要射击的tag目标
+    int tag_id;
+
+public:
+    AprilTagController() : private_nh_("~")
     {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
-        count++;
+        // 初始化订阅者和发布者
+        tag_sub_ = nh_.subscribe("tag_detections", 1, &AprilTagController::tagCallback, this);
+        cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
+        shoot_client = nh_.serviceClient<std_srvs::Empty>("/shoot");
+
+        private_nh_.getParam("tag", tag_id);
+        ROS_INFO("The value of tag is %d.", tag_id);
     }
-    // Stop
-    vel_msg.linear.x = 0.0;
-    pub.publish(vel_msg);
 
-    ROS_INFO("Retrying to move to target point (%.3f, %.3f, %.3f)", x, y, yaw);
-    Move2goal(ac, pub, x, y, yaw, tag_name);
-}
-
-void Move_safe(ros::Publisher &pub, double linear_x, double linear_y, double distance)
-{
-    geometry_msgs::Twist vel_msg;
-    vel_msg.linear.x = linear_x;
-    vel_msg.linear.y = linear_y;
-    int count = 0;
-    ros::Rate loop_rate(10);
-    while (ros::ok() && count < distance)
+    void tagCallback(const apriltag_ros::AprilTagDetectionArray::ConstPtr &msg)
     {
-        pub.publish(vel_msg);
-        ros::spinOnce();
-        loop_rate.sleep();
-        count++;
-    }
-    // 停下
-    vel_msg.linear.x = 0.0;
-    vel_msg.linear.y = 0.0;
-    pub.publish(vel_msg);
-}
+        geometry_msgs::Twist cmd_vel;
+        bool target_found = false;
 
-void SwingAndShoot(ros ::Publisher &pub)
-{
-    geometry_msgs::Twist vel_msg;
-    ros::Rate loop_rate(10);
-    ROS_INFO("Laser ON, starting swing...");
-    // 参数
-    const double swing_speed = 0.27;      // 角速度 rad/s
-    const double swing_angle = 0.262;   // 15度 = π/12 弧度
-    const int one_way_steps = (int)(swing_angle / swing_speed / 0.1);  // 约10步
-    // 左摆30度
-    vel_msg.angular.z = swing_speed;
-    for (int i = 0; i < one_way_steps && ros::ok(); i++)
+        for (const auto &detection : msg->detections)
+        {
+            if (detection.id[0] == tag_id)
+            {
+                double current_x = detection.pose.pose.pose.position.x;
+                ROS_INFO("The current x position is %f", current_x);
+                double current_z = detection.pose.pose.pose.position.z;
+                ROS_INFO("The current z position is %f", current_z);
+
+                if ((fabs(current_x) < target_x_tolerance) && (fabs(current_z - z_target_distance) < target_z_tolerance))
+                {
+                    shoot_client.call(empty_srv);
+                    cmd_vel.linear.x = 0;
+                    ros::Rate loop_rate(10);
+
+                    //向右
+                    cmd_vel.angular.z = -0.1;
+                    int count = 0;
+                    while (ros::ok() && count < 5)
+                    {
+                        ROS_INFO("shoot");
+                        cmd_vel_pub_.publish(cmd_vel);
+                        loop_rate.sleep();
+                        count++;
+                    }
+
+                    //向左
+                    cmd_vel.angular.z = 0.1;
+                    count = 0;
+                    while (ros::ok() && count < 10)
+                    {
+                        ROS_INFO("shoot");
+                        cmd_vel_pub_.publish(cmd_vel);
+                        loop_rate.sleep();
+                        count++;
+                    }
+
+                    // back
+                    cmd_vel.linear.x = -0.07;
+                    count = 0;
+                    while (ros::ok() && count < 10)
+                    {
+                        cmd_vel_pub_.publish(cmd_vel);
+                        loop_rate.sleep();
+                        count++;
+                    }
+                    // Stop
+                    cmd_vel.linear.x = 0.0;
+                    cmd_vel_pub_.publish(cmd_vel);
+
+                    should_exit_ = true;
+                    ros::param::set("/apriltag_exit_status", "normal_exit");
+                    ros::shutdown(); // 终止ROS通信
+                    return;          // 直接退出回调函数
+                }
+                else if (fabs(current_x) > target_x_tolerance)
+                {
+                    if (fabs(fabs(current_x) - target_x_tolerance) < 0.0065)
+                    {
+                        cmd_vel.angular.z = 8 * (-current_x);
+                    }
+                    else
+                    {
+                        cmd_vel.angular.z = Kp * (-current_x);
+                    }
+                }
+                else if (fabs(current_z - z_target_distance) > target_z_tolerance)
+                {
+                    cmd_vel.linear.x = Kp * 0.3 * (current_z - z_target_distance);
+                }
+                target_found = true;
+                break;
+            }
+        }
+        if (!target_found)
+        {
+            // 如果还没有开始后退，记录开始时间
+            if (!is_backing_up_)
+            {
+                is_backing_up_ = true;
+                backup_start_time_ = ros::Time::now();
+                ROS_INFO("Starting backup, target tag not detected");
+            }
+
+            // 检查是否已经后退足够时间
+            ros::Duration backup_elapsed = ros::Time::now() - backup_start_time_;
+            if (backup_elapsed.toSec() >= backup_duration_)
+            {
+                ROS_INFO("Backup time reached, executing next task");
+                executeNextTask();
+                ros::param::set("/apriltag_exit_status", "unnormal_exit");
+                return;
+            }
+
+            // 继续后退
+            ROS_INFO("Backing up... %.1f seconds elapsed", backup_elapsed.toSec());
+            cmd_vel.linear.x = -0.05;
+            cmd_vel.angular.z = 0;
+        }
+        else
+        {
+            // 如果检测到目标，重置后退状态
+            if (is_backing_up_)
+            {
+                is_backing_up_ = false;
+                ROS_INFO("Target detected, stopping backup");
+            }
+        }
+        cmd_vel_pub_.publish(cmd_vel);
+    }
+
+    void executeNextTask()
     {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
+        ROS_INFO("Executing next task...");
+
+        // 停止机器人运动
+        geometry_msgs::Twist stop_cmd;
+        stop_cmd.linear.x = 0;
+        stop_cmd.angular.z = 0;
+        cmd_vel_pub_.publish(stop_cmd);
+
+        // 示例：退出程序
+        should_exit_ = true;
+        ros::shutdown();
+
+        ROS_INFO("Next task execution completed");
     }
-    // 右摆60度（从左20度 → 右20度）
-    vel_msg.angular.z = -swing_speed;
-    for (int i = 0; i < one_way_steps * 2 && ros::ok(); i++)
-    {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
-    }
-    // // 回正30度（从右20度 → 中心）
-    // vel_msg.angular.z = swing_speed;
-    // for (int i = 0; i < one_way_steps && ros::ok(); i++)
-    // {
-    //     pub.publish(vel_msg);
-    //     loop_rate.sleep();
-    // }
-    //停止
-    vel_msg.angular.z = 0;
-    pub.publish(vel_msg);
-}
-
-void Move2goal(MoveBaseClient &ac, ros ::Publisher &pub,double x, double y, double yaw, string tag_name)
-{
-    tf2::Quaternion quaternion;
-    quaternion.setRPY(0, 0, yaw);
-    move_base_msgs::MoveBaseGoal goal;
-    goal.target_pose.pose.position.x = x;
-    goal.target_pose.pose.position.y = y;
-    goal.target_pose.pose.orientation.z = quaternion.z();
-    goal.target_pose.pose.orientation.w = quaternion.w();
-    goal.target_pose.header.frame_id = "map";
-    goal.target_pose.header.stamp = ros::Time::now();
-    ac.sendGoal(goal);
-    ROS_INFO("MoveBase Send Goal !!!");
-    ac.waitForResult();
-
-    actionlib::SimpleClientGoalState state = ac.getState();
-
-    switch (state.state_)
-    {
-    case actionlib::SimpleClientGoalState::SUCCEEDED:
-        ROS_INFO("Target point %s (%.3f, %.3f, %.3f) reached successfully!", tag_name.c_str(), x, y, yaw);
-        SwingAndShoot(pub);
-        break;
-
-    case actionlib::SimpleClientGoalState::ABORTED:
-        ROS_WARN("Navigation aborted - possibly due to obstacles or path planning failure");
-        performRetryLogic(ac, pub, x, y, yaw, tag_name);
-        break;
-    }
-    // sleep(0.5);
-}
-
-void Move1goal(MoveBaseClient &ac, double x, double y, double yaw)
-{
-    tf2::Quaternion quaternion;
-    quaternion.setRPY(0, 0, yaw);
-    move_base_msgs::MoveBaseGoal goal;
-    goal.target_pose.pose.position.x = x;
-    goal.target_pose.pose.position.y = y;
-    goal.target_pose.pose.orientation.z = quaternion.z();
-    goal.target_pose.pose.orientation.w = quaternion.w();
-    goal.target_pose.header.frame_id = "map";
-    goal.target_pose.header.stamp = ros::Time::now();
-    ac.sendGoal(goal);
-    ROS_INFO("MoveBase Send Goal !!!");
-    ac.waitForResult();
-    // sleep(0.5);
-}
+};
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "shoot_robot_base");
-    ros::NodeHandle nh;
-
-    geometry_msgs::Twist vel_msg;
-    ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
-    // 【修改】同时声明开启和关闭激光的服务客户端
-    ros::ServiceClient shoot_close_client = nh.serviceClient<std_srvs::Empty>("/close");
-    ros::ServiceClient shoot_open_client = nh.serviceClient<std_srvs::Empty>("/shoot");
-    std_srvs::Empty empty_srv;
-    MoveBaseClient ac("move_base", true);
-    ac.waitForServer();
-
-    int count = 0;
-    ros::Rate loop_rate(10);
-    // 【修改】程序开始时，常开激光
-    ros::service::waitForService("/shoot");
-    shoot_open_client.call(empty_srv);
-    ROS_INFO("Laser ON (Always on until return)");
-    
-    // Move_safe(pub,0.0,0.4,30);
-    // Move_safe(pub,0.4,0.0,25);
-    // Move_safe(pub,0.0,0.4,20);
-    // sleep(0.5);
-
-    // First target point G
-    Move2goal(ac, pub,2.54, 0.79, 0.785, "1");
-    
-    // //Second target point H
-    Move2goal(ac, pub,2.34, -0.005, -0.785, "1");
-
-    // vel_msg.linear.x = -0.05;
-    // count = 0;
-    // while (ros::ok() && count < 20)
-    // {
-    //     pub.publish(vel_msg);
-    //     loop_rate.sleep();
-    //     count++;
-    // }
-    // // Stop
-    // vel_msg.linear.x = 0.0;
-    // pub.publish(vel_msg);
-
-    // //Third target point I
-    Move2goal(ac, pub,1.585, 0.105, -2.355, "1");
-    
-    // Fourth target point
-    Move2goal(ac, pub,1.70, 2.48, 2.355, "1");
-    
-    // Fifth target point
-    Move2goal(ac, pub,2.59, 2.40, 0.785, "1");//(2.5,2.41,0.785)
-    
-    // Sixth target point
-    Move2goal(ac, pub,2.38, 1.46, -0.785, "1");
-    
-    Move1goal(ac,1.40,1.40,-3.14);
-    sleep(0.5);
-    // Seventh target point
-    Move2goal(ac, pub,0.06, 1.77, -2.355, "1");
-
-    // Eighth target point
-    Move2goal(ac, pub,0.08, 2.43, 2.355, "1");//x0.12 y2.50
-    
-    // nineth target point
-    Move2goal(ac, pub,0.98, 2.36, 0.785, "1");
-    
-    Move1goal(ac, 0.1, 0.1, 0);//(0.05,0.05,0)
-    // Move_safe(pub,0.0,-0.4,15);
-    // Move_safe(pub,-0.4,0.0,15);
-    // 【修改】完成所有动作，返回起始点后，关闭激光
-    ros::service::waitForService("/close");
-    shoot_close_client.call(empty_srv);
-    ROS_INFO("Returned to start. Laser OFF.");
+    ros::init(argc, argv, "apriltag_controller");
+    AprilTagController controller;
+    ros::Rate loop_rate(10); // 控制循环频率（10Hz）
+    while (ros::ok())
+    {
+        ros::spinOnce(); // 处理回调队列
+        loop_rate.sleep();
+    }
+    // 退出前的清理工作（可选）
+    ROS_INFO("Node shutdown gracefully");
     return 0;
 }

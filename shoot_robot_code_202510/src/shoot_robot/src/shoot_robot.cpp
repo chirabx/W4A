@@ -70,7 +70,7 @@ void SwingAndShoot(ros ::Publisher &pub)
     ros::Rate loop_rate(10);
     ROS_INFO("Laser ON, starting swing...");
     // 参数
-    const double swing_speed = 0.27;      // 角速度 rad/s 0.27
+    const double swing_speed = 0.25;      // 角速度 rad/s 0.27
     const double swing_angle = 0.262;   // 15度 = π/12 弧度
     const int one_way_steps = (int)(swing_angle / swing_speed / 0.1);  // 约10步
     // 左摆30度

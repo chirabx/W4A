@@ -164,7 +164,7 @@ int main(int argc, char **argv)
     shoot_close_client.call(empty_srv);
     
     // Fourth target point
-    Move2goal(ac, 1.59, 2.33, 2.355, "1");
+    Move2goal(ac, 1.58, 2.35, 2.355, "1");
     shoot_close_client.call(empty_srv);
     
     // Fifth target point

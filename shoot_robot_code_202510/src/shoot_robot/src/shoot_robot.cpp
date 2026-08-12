@@ -63,41 +63,57 @@ void Move_safe(ros::Publisher &pub, double linear_x, double linear_y, double dis
     vel_msg.linear.y = 0.0;
     pub.publish(vel_msg);
 }
-
-void SwingAndShoot(ros ::Publisher &pub)
+void Turn_safe_1(ros::Publisher &pub, double angular_z, double distance)
 {
     geometry_msgs::Twist vel_msg;
+    vel_msg.angular.z = angular_z;
+    int count = 0;
     ros::Rate loop_rate(10);
-    ROS_INFO("Laser ON, starting swing...");
-    // 参数
-    const double swing_speed = 0.25;      // 角速度 rad/s 0.27
-    const double swing_angle = 0.262;   // 15度 = π/12 弧度
-    const int one_way_steps = (int)(swing_angle / swing_speed / 0.1);  // 约10步
-    // 左摆30度
-    vel_msg.angular.z = swing_speed;
-    for (int i = 0; i < one_way_steps && ros::ok(); i++)
+    while (ros::ok() && count < distance)
     {
         pub.publish(vel_msg);
+        ros::spinOnce();
         loop_rate.sleep();
+        count++;
     }
-    // 右摆60度（从左20度 → 右20度）
-    vel_msg.angular.z = -swing_speed;
-    for (int i = 0; i < one_way_steps * 2 && ros::ok(); i++)
-    {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
-    }
-    // // 回正30度（从右20度 → 中心）
-    // vel_msg.angular.z = swing_speed;
-    // for (int i = 0; i < one_way_steps && ros::ok(); i++)
-    // {
-    //     pub.publish(vel_msg);
-    //     loop_rate.sleep();
-    // }
-    //停止
-    vel_msg.angular.z = 0;
+    // 停下
+    vel_msg.angular.z = 0.0;
     pub.publish(vel_msg);
 }
+// ================================================================
+// 分段摆动扫射（改造版）：转5° → 停0.5s → 回摆5° → 停0.5s → 离开
+// 纯导航方案：不依赖摄像头，利用 Turn_safe_1 固定时长旋转实现
+// 命中原理：旋转段光斑在靶面移动，扫过 AprilTag 白区/黑框产生亮暗脉冲
+// 激光：调用前由主程序开启（常亮贯穿），本函数不碰激光，
+//       结束后由主程序在去下一航点前统一关闭
+// ================================================================
+void SwingAndShoot(ros::Publisher &pub)
+{
+    ROS_INFO("SwingAndShoot: left 5deg x2, right 5deg x4");
+
+    // 参数（10Hz 步进，每步 0.1s）
+    const double swing_speed = 0.22;   // 0.22 × 0.4s = 0.088rad ≈ 5.04°
+    const int    swing_steps = 4;      // 旋转步数 = 0.4s（≈5°）
+    const int    pause_steps = 8;      // 停顿步数 = 0.5s（若不要停顿，删掉这两行即可）
+
+    // 左转 5° × 2
+    for (int i = 0; i < 1; i++)
+    {
+        Turn_safe_1(pub,  swing_speed, swing_steps);
+        Turn_safe_1(pub,  0.0, pause_steps);
+    }
+
+    // 右转 5° × 4（负号 = 右转）
+    for (int i = 0; i < 2; i++)
+    {
+        Turn_safe_1(pub, -swing_speed, swing_steps);
+        Turn_safe_1(pub,  0.0, pause_steps);
+    }
+
+    ROS_INFO("Swing done, moving to next waypoint.");
+}
+
+
 
 void Move2goal(MoveBaseClient &ac, ros ::Publisher &pub,double x, double y, double yaw, string tag_name)
 {
@@ -175,10 +191,10 @@ int main(int argc, char **argv)
     // sleep(0.5);
 
     // First target point G
-    Move2goal(ac, pub,2.42, 0.78, 0.785, "1");
+    Move2goal(ac, pub,2.44, 0.77, 0.785, "1");
     
     // //Second target point H
-    Move2goal(ac, pub,2.34, 0.05, -0.785, "1");
+    Move2goal(ac, pub,2.34, 0.01, -0.785, "1");
 
     // vel_msg.linear.x = -0.05;
     // count = 0;
@@ -193,21 +209,21 @@ int main(int argc, char **argv)
     // pub.publish(vel_msg);
 
     // //Third target point I
-    Move2goal(ac, pub,1.67, 0.05, -2.355, "1");
+    Move2goal(ac, pub,1.63, 0.07, -2.355, "1");
     
     // Fourth target point
-    Move2goal(ac, pub,1.55, 2.40, 2.355, "1");
+    Move2goal(ac, pub,1.59, 2.42, 2.355, "1");
     
     // Fifth target point
-    Move2goal(ac, pub,2.43, 2.36, 0.785, "1");//(2.5,2.41,0.785)
+    Move2goal(ac, pub,2.41, 2.36, 0.785, "1");//(2.5,2.41,0.785)
     
     // Sixth target point
-    Move2goal(ac, pub,2.35, 1.53, -0.785, "1");
+    Move2goal(ac, pub,2.35, 1.51, -0.785, "1");
     
     Move1goal(ac,1.40,1.40,-3.14);
     sleep(0.5);
     // Seventh target point
-    Move2goal(ac, pub,0.08, 1.72, -2.355, "1");
+    Move2goal(ac, pub,0.08, 1.74, -2.355, "1");
 
     // Eighth target point
     Move2goal(ac, pub,0.06, 2.43, 2.355, "1");//x0.12 y2.50

@@ -140,11 +140,11 @@ int main(int argc, char **argv)
    
 
     // First target point G
-    Move2goal(ac, 2.48, 0.78, 0.785, "1");
+    Move2goal(ac, 2.44, 0.80, 0.785, "1");
     shoot_close_client.call(empty_srv);
     
     // //Second target point H
-    Move2goal(ac, 2.38, 0.05, -0.785, "1");
+    Move2goal(ac, 2.37, 0.01, -0.785, "1");
     shoot_close_client.call(empty_srv);
 
     // vel_msg.linear.x = -0.05;
@@ -160,15 +160,15 @@ int main(int argc, char **argv)
     // pub.publish(vel_msg);
 
     // //Third target point I
-    Move2goal(ac, 1.67, 0.05, -2.355, "1");
+    Move2goal(ac, 1.66, 0.05, -2.355, "1");
     shoot_close_client.call(empty_srv);
     
     // Fourth target point
-    Move2goal(ac, 1.53, 2.42, 2.355, "1");
+    Move2goal(ac, 1.59, 2.33, 2.355, "1");
     shoot_close_client.call(empty_srv);
     
     // Fifth target point
-    Move2goal(ac, 2.45, 2.39, 0.785, "1");//(2.5,2.41,0.785)
+    Move2goal(ac, 2.45, 2.37, 0.785, "1");//(2.5,2.41,0.785)
     shoot_close_client.call(empty_srv);
     
     // Sixth target point
@@ -177,15 +177,15 @@ int main(int argc, char **argv)
     
     
     // Seventh target point
-    Move2goal(ac, 0.10, 1.69, -2.355, "1");
+    Move2goal(ac, 0.09, 1.66, -2.355, "1");
     shoot_close_client.call(empty_srv);
 
     // Eighth target point
-    Move2goal(ac, 0.04, 2.48, 2.355, "1");//x0.12 y2.50
+    Move2goal(ac, 0.04, 2.43, 2.355, "1");//x0.12 y2.50
     shoot_close_client.call(empty_srv);
     
     // nineth target point
-    Move2goal(ac, 0.94, 2.40, 0.785, "1");
+    Move2goal(ac, 0.92, 2.40, 0.785, "1");
     shoot_close_client.call(empty_srv);
 
     Move1goal(ac, 0.03, 0.03, 0.0);

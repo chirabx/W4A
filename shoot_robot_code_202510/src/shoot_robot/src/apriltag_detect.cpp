@@ -2,7 +2,7 @@
 #include <apriltag_ros/AprilTagDetectionArray.h>
 #include <geometry_msgs/Twist.h>
 #include <std_srvs/Empty.h>
-
+#include <cmath>
 class AprilTagController
 {
 private:
@@ -29,6 +29,9 @@ private:
     bool is_backing_up_ = false;
     ros::Time backup_start_time_;
     const double backup_duration_ = 2.0;    // 搜索后退超时
+    // 搜索扫射参数（找不到 tag 时：后退 + 正弦摆头）
+    const double search_swing_amp    = 0.15;   // 摆幅 rad ≈ ±8.6°（现场调 0.10~0.20）
+    const double search_swing_period = 0.8;    // 摆动周期 s（0.6~1.0，别太快）
 
     ros::Time adjust_start_time_;           // 微调开始时刻
     const double adjust_timeout_ = 3.0;     // 微调超时2秒
@@ -244,8 +247,10 @@ public:
                     return;
                 }
 
+                // 后退 + 正弦摆头：光斑走之字形扫靶，横竖条纹都覆盖
                 cmd_vel.linear.x = -0.05;
-                cmd_vel.angular.z = 0;
+                cmd_vel.angular.z = search_swing_amp * sin(2 * M_PI * backup_elapsed.toSec() / search_swing_period);
+
             }
         }
         else
@@ -263,6 +268,10 @@ public:
     // ========================================================
     // 射后动作：右转→左转→后退→退出（保持原逻辑）
     // ========================================================
+        // ========================================================
+    // 射后动作：停稳 → 后退 + 正弦摆头扫射 1.0s → 停车退出
+    // 激光在检测即射时已常亮（未关），摆动+后退让光斑走之字形
+    // ========================================================
     void doPostShootAction()
     {
         geometry_msgs::Twist cmd_vel;
@@ -273,32 +282,15 @@ public:
         cmd_vel.angular.z = 0;
         cmd_vel_pub_.publish(cmd_vel);
 
-        // 向右 0.5s
-        cmd_vel.angular.z = -0.1;
+        // 后退 1.0s + 正弦摆头（光斑之字形扫靶）
+        const double swing_amp   = 0.175;   // 摆幅 rad ≈ ±8.6°（现场调 0.10~0.20）
+        const double swing_period = 1.0;   // 摆动周期 s
         int count = 0;
-        while (ros::ok() && count < 2)
+        cmd_vel.linear.x = -0.05;          // 后退速度（可调）
+        while (ros::ok() && count < 15)    // 10 步 = 1.0s
         {
-            cmd_vel_pub_.publish(cmd_vel);
-            loop_rate.sleep();
-            count++;
-        }
-
-        // 向左 1.0s
-        cmd_vel.angular.z = 0.1;
-        count = 0;
-        while (ros::ok() && count < 3)
-        {
-            cmd_vel_pub_.publish(cmd_vel);
-            loop_rate.sleep();
-            count++;
-        }
-
-        // 后退 1.0s
-        cmd_vel.angular.z = 0;
-        cmd_vel.linear.x = -0.07;
-        count = 0;
-        while (ros::ok() && count < 10)
-        {
+            double t = count * 0.1;        // 当前时刻（s）
+            cmd_vel.angular.z = swing_amp * sin(2 * M_PI * t / swing_period);
             cmd_vel_pub_.publish(cmd_vel);
             loop_rate.sleep();
             count++;
@@ -306,12 +298,14 @@ public:
 
         // 停车
         cmd_vel.linear.x = 0.0;
+        cmd_vel.angular.z = 0.0;
         cmd_vel_pub_.publish(cmd_vel);
 
         should_exit_ = true;
         ros::param::set("/apriltag_exit_status", "normal_exit");
         ros::shutdown();
     }
+
 
     void executeNextTask()
     {

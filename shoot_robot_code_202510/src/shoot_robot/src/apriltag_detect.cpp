@@ -82,12 +82,73 @@ public:
                 // ============================================================
                 // 状态2：微调中 → 同时调x和z（并行，不串行）
                 // ============================================================
+                // if (state_ == ADJUSTING)
+                // {
+                //     bool x_ok = fabs(current_x) < target_x_tolerance;
+                //     bool z_ok = fabs(current_z - z_target_distance) < target_z_tolerance;
+
+                //     // 并行调x（转向）+ z（前后），互不阻塞（不再串行）
+                //     if (!x_ok)
+                //     {
+                //         if (fabs(current_x) < deadband_x)
+                //         {
+                //             cmd_vel.angular.z = 0;   // 死区内：不转向，防蛇形
+                //         }
+                //         else
+                //         {
+                //             // 近场用小增益防超调，远场用Kp
+                //             double gain = (fabs(current_x) < 0.03) ? 2.0 : Kp;
+                //             cmd_vel.angular.z = gain * (-current_x);
+                //         }
+                //     }
+                //     if (!z_ok)
+                //     {
+                //         if (fabs(current_z - z_target_distance) < deadband_z)
+                //         {
+                //             cmd_vel.linear.x = 0;    // 死区内：不前后，防蛇形
+                //         }
+                //         else
+                //         {
+                //             cmd_vel.linear.x = Kp * 0.3 * (current_z - z_target_distance);
+                //         }
+                //     }
+
+                //     // x和z都对准了 → 精确射击（只射一次，防重复）
+                //     if (x_ok && z_ok && !precise_shot_done_)
+                //     {
+                //         ROS_INFO("Aligned! Precise shot! x=%.4f z=%.4f", current_x, current_z);
+                //         shoot_client.call(empty_srv);
+                //         precise_shot_done_ = true;
+                //         doPostShootAction();
+                //         return;
+                //     }
+
+                //     // 2秒超时 → 不管对没对准，执行射后动作
+                //     ros::Duration elapsed = ros::Time::now() - adjust_start_time_;
+                //     if (elapsed.toSec() >= adjust_timeout_)
+                //     {
+                //         ROS_INFO("Timeout %.1fs! x=%.4f z=%.4f. Post-shoot anyway.",
+                //                  elapsed.toSec(), current_x, current_z);
+                //         doPostShootAction();
+                //         return;
+                //     }
+
+                //     ROS_INFO("Adjusting %.1fs | x=%.4f(%s) z=%.4f(%s)",
+                //              elapsed.toSec(),
+                //              current_x, x_ok ? "OK" : "ADJ",
+                //              current_z, z_ok ? "OK" : "ADJ");
+                // }
+                                // ============================================================
+                // 状态2：微调中 → 串行调整：先调 x（左右），x 对准后再调 z（前后）
+                // 说明：前进/后退会扰动 x（车偏着走），所以 z 阶段若 x 又偏出容差，
+                //       下一帧自动回到 x 阶段，保证精射时左右是准的
+                // ============================================================
                 if (state_ == ADJUSTING)
                 {
                     bool x_ok = fabs(current_x) < target_x_tolerance;
                     bool z_ok = fabs(current_z - z_target_distance) < target_z_tolerance;
 
-                    // 并行调x（转向）+ z（前后），互不阻塞（不再串行）
+                    // —— 阶段1：左右未对准 → 只转左右，前后冻结 ——
                     if (!x_ok)
                     {
                         if (fabs(current_x) < deadband_x)
@@ -100,8 +161,10 @@ public:
                             double gain = (fabs(current_x) < 0.03) ? 2.0 : Kp;
                             cmd_vel.angular.z = gain * (-current_x);
                         }
+                        cmd_vel.linear.x = 0;        // 前后冻结，只调左右
                     }
-                    if (!z_ok)
+                    // —— 阶段2：左右已对准 → 只调前后，左右冻结 ——
+                    else
                     {
                         if (fabs(current_z - z_target_distance) < deadband_z)
                         {
@@ -111,6 +174,7 @@ public:
                         {
                             cmd_vel.linear.x = Kp * 0.3 * (current_z - z_target_distance);
                         }
+                        cmd_vel.angular.z = 0;       // 左右冻结
                     }
 
                     // x和z都对准了 → 精确射击（只射一次，防重复）
@@ -138,6 +202,7 @@ public:
                              current_x, x_ok ? "OK" : "ADJ",
                              current_z, z_ok ? "OK" : "ADJ");
                 }
+
                 break;
             }
         }

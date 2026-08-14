@@ -2,7 +2,7 @@
 #include <apriltag_ros/AprilTagDetectionArray.h>
 #include <geometry_msgs/Twist.h>
 #include <std_srvs/Empty.h>
-#include <cmath>
+
 class AprilTagController
 {
 private:
@@ -13,51 +13,93 @@ private:
     ros::Publisher cmd_vel_pub_;
     ros::ServiceClient shoot_client;
 
-    // 控制参数（比赛实测版：Kp=3 + 死区防蛇形）
-    double Kp = 3.0;                        // 比例系数（实测3最佳，过大会蛇形抖动）
-    const double target_x_tolerance = 0.01; // x容差 1cm
-    const double z_target_distance = 0.114; // z目标距离 11.4cm
-    const double target_z_tolerance = 0.02; // z容差 2cm
-    double deadband_x = 0.005;              // x转向死区 5mm：|x|<5mm 不转向
-    double deadband_z = 0.005;              // z前后死区 5mm：|z_err|<5mm 不前进/后退
+    // PID控制参数
+    const double Kp = 5;                    // 比例系数
+    const double target_x_tolerance = 0.01; // X轴位置容忍误差
 
-    // 状态机：SEARCHING=搜索tag  ADJUSTING=已初射，微调中
-    enum State { SEARCHING, ADJUSTING };
-    State state_ = SEARCHING;
+    const double z_target_distance = 0.114;
+    const double target_z_tolerance = 0.02;
 
-    bool should_exit_ = false;
     bool is_backing_up_ = false;
+    bool is_shoot_or_down = false;
     ros::Time backup_start_time_;
-    const double backup_duration_ = 2.0;    // 搜索后退超时
-    // 搜索扫射参数（找不到 tag 时：后退 + 正弦摆头）
-    const double search_swing_amp    = 0.15;   // 摆幅 rad ≈ ±8.6°（现场调 0.10~0.20）
-    const double search_swing_period = 0.8;    // 摆动周期 s（0.6~1.0，别太快）
-
-    ros::Time adjust_start_time_;           // 微调开始时刻
-    const double adjust_timeout_ = 3.0;     // 微调超时2秒
-    bool precise_shot_done_ = false;        // 精射是否已完成（防重复）
+    const double backup_duration_ = 2.0; // 初始寻找靶子超时时间（秒）
 
     std_srvs::Empty empty_srv;
+
+    // 目标 tag ID
     int tag_id;
 
 public:
     AprilTagController() : private_nh_("~")
     {
+        // 初始化订阅者和发布者
         tag_sub_ = nh_.subscribe("tag_detections", 1, &AprilTagController::tagCallback, this);
         cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
         shoot_client = nh_.serviceClient<std_srvs::Empty>("/shoot");
 
         private_nh_.getParam("tag", tag_id);
-        // Kp/死区可经 launch 覆盖：_kp:=3 _deadband_x:=0.005 _deadband_z:=0.005
-        private_nh_.param("kp", Kp, 3.0);
-        private_nh_.param("deadband_x", deadband_x, 0.005);
-        private_nh_.param("deadband_z", deadband_z, 0.005);
-        ROS_INFO("The value of tag is %d. Kp=%.2f deadband_x=%.3f deadband_z=%.3f",
-                 tag_id, Kp, deadband_x, deadband_z);
+        ROS_INFO("The value of target tag is %d.", tag_id);
+    }
+
+    // 安全单步旋转函数
+    void Turn_safe_1(ros::Publisher &pub, double angular_z, int distance)
+    {
+        geometry_msgs::Twist vel_msg;
+        vel_msg.angular.z = angular_z;
+        int count = 0;
+        ros::Rate loop_rate(10);
+        while (ros::ok() && count < distance)
+        {
+            pub.publish(vel_msg);
+            ros::spinOnce();
+            loop_rate.sleep();
+            count++;
+        }
+        // 停止旋转
+        vel_msg.angular.z = 0.0;
+        pub.publish(vel_msg);
+    }
+
+    // 分步射击函数：偏左向左分步旋转射击，偏右向右分步旋转射击
+    void StepShoot(ros::Publisher &pub, bool is_left)
+    {
+        // ===== 参数可调 =====
+        const double turn_speed        = 0.18;    // 旋转角速度 rad/s
+        const double step_angle        = 0.0697;  // 每次旋转角度（弧度），约 4°
+        const int    left_repeat_times  = 3;       // 偏左时左转循环次数
+        const int    right_repeat_times = 3;       // 偏右时右转循环次数
+        const double pause_sec         = 0.8;     // 每次停顿（射击）时间（秒）
+        // =====================
+        const int turn_steps = (int)(step_angle / turn_speed / 0.1); // 10Hz 下每步循环次数
+
+        if (is_left)
+        {
+            ROS_INFO("Target is LEFT. Rotating LEFT (%d times)...", left_repeat_times);
+            for (int i = 0; i < left_repeat_times && ros::ok(); i++)
+            {
+                Turn_safe_1(pub, turn_speed, turn_steps);
+                ros::Duration(pause_sec).sleep();
+            }
+        }
+        else
+        {
+            ROS_INFO("Target is RIGHT. Rotating RIGHT (%d times)...", right_repeat_times);
+            for (int i = 0; i < right_repeat_times && ros::ok(); i++)
+            {
+                Turn_safe_1(pub, -turn_speed, turn_steps);
+                ros::Duration(pause_sec).sleep();
+            }
+        }
     }
 
     void tagCallback(const apriltag_ros::AprilTagDetectionArray::ConstPtr &msg)
     {
+        if (is_shoot_or_down)
+        { 
+            return; 
+        }
+
         geometry_msgs::Twist cmd_vel;
         bool target_found = false;
 
@@ -66,256 +108,124 @@ public:
             if (detection.id[0] == tag_id)
             {
                 double current_x = detection.pose.pose.pose.position.x;
+                ROS_INFO("The current x position is %f", current_x);
                 double current_z = detection.pose.pose.pose.position.z;
-                target_found = true;
+                ROS_INFO("The current z position is %f", current_z);
 
-                // ============================================================
-                // 状态1：首次检测到tag → 直接射击，进入微调
-                // ============================================================
-                if (state_ == SEARCHING)
+                // 到达射击位置（X对准且Z距离达标）
+                if ((fabs(current_x) < target_x_tolerance) && (fabs(current_z - z_target_distance) < target_z_tolerance))
                 {
-                    ROS_INFO("Tag %d detected! Immediate shoot! x=%.4f z=%.4f", tag_id, current_x, current_z);
-                    shoot_client.call(empty_srv);           // 立刻射一发
-                    state_ = ADJUSTING;
-                    adjust_start_time_ = ros::Time::now();
-                    precise_shot_done_ = false;
-                    ROS_INFO("Entering adjustment (2s timeout)...");
-                }
+                    is_shoot_or_down = true;
+                    // 1. 停车
+                    cmd_vel.linear.x = 0.0;
+                    cmd_vel.angular.z = 0.0;
+                    cmd_vel_pub_.publish(cmd_vel);
 
-                // ============================================================
-                // 状态2：微调中 → 同时调x和z（并行，不串行）
-                // ============================================================
-                // if (state_ == ADJUSTING)
-                // {
-                //     bool x_ok = fabs(current_x) < target_x_tolerance;
-                //     bool z_ok = fabs(current_z - z_target_distance) < target_z_tolerance;
+                    // 2. 打开激光
+                    shoot_client.call(empty_srv);
 
-                //     // 并行调x（转向）+ z（前后），互不阻塞（不再串行）
-                //     if (!x_ok)
-                //     {
-                //         if (fabs(current_x) < deadband_x)
-                //         {
-                //             cmd_vel.angular.z = 0;   // 死区内：不转向，防蛇形
-                //         }
-                //         else
-                //         {
-                //             // 近场用小增益防超调，远场用Kp
-                //             double gain = (fabs(current_x) < 0.03) ? 2.0 : Kp;
-                //             cmd_vel.angular.z = gain * (-current_x);
-                //         }
-                //     }
-                //     if (!z_ok)
-                //     {
-                //         if (fabs(current_z - z_target_distance) < deadband_z)
-                //         {
-                //             cmd_vel.linear.x = 0;    // 死区内：不前后，防蛇形
-                //         }
-                //         else
-                //         {
-                //             cmd_vel.linear.x = Kp * 0.3 * (current_z - z_target_distance);
-                //         }
-                //     }
+                    ROS_INFO("Reached target position. Firing laser and executing step shoot...");
 
-                //     // x和z都对准了 → 精确射击（只射一次，防重复）
-                //     if (x_ok && z_ok && !precise_shot_done_)
-                //     {
-                //         ROS_INFO("Aligned! Precise shot! x=%.4f z=%.4f", current_x, current_z);
-                //         shoot_client.call(empty_srv);
-                //         precise_shot_done_ = true;
-                //         doPostShootAction();
-                //         return;
-                //     }
-
-                //     // 2秒超时 → 不管对没对准，执行射后动作
-                //     ros::Duration elapsed = ros::Time::now() - adjust_start_time_;
-                //     if (elapsed.toSec() >= adjust_timeout_)
-                //     {
-                //         ROS_INFO("Timeout %.1fs! x=%.4f z=%.4f. Post-shoot anyway.",
-                //                  elapsed.toSec(), current_x, current_z);
-                //         doPostShootAction();
-                //         return;
-                //     }
-
-                //     ROS_INFO("Adjusting %.1fs | x=%.4f(%s) z=%.4f(%s)",
-                //              elapsed.toSec(),
-                //              current_x, x_ok ? "OK" : "ADJ",
-                //              current_z, z_ok ? "OK" : "ADJ");
-                // }
-                                // ============================================================
-                // 状态2：微调中 → 串行调整：先调 x（左右），x 对准后再调 z（前后）
-                // 说明：前进/后退会扰动 x（车偏着走），所以 z 阶段若 x 又偏出容差，
-                //       下一帧自动回到 x 阶段，保证精射时左右是准的
-                // ============================================================
-                if (state_ == ADJUSTING)
-                {
-                    bool x_ok = fabs(current_x) < target_x_tolerance;
-                    bool z_ok = fabs(current_z - z_target_distance) < target_z_tolerance;
-
-                    // —— 阶段1：左右未对准 → 只转左右，前后冻结 ——
-                    if (!x_ok)
+                    // 3. 执行分步扫射打靶
+                    if (current_x < 0.0)
                     {
-                        if (fabs(current_x) < deadband_x)
-                        {
-                            cmd_vel.angular.z = 0;   // 死区内：不转向，防蛇形
-                        }
-                        else
-                        {
-                            // 近场用小增益防超调，远场用Kp
-                            double gain = (fabs(current_x) < 0.03) ? 2.0 : Kp;
-                            cmd_vel.angular.z = gain * (-current_x);
-                        }
-                        cmd_vel.linear.x = 0;        // 前后冻结，只调左右
+                        StepShoot(cmd_vel_pub_, false);  // 偏左 -> 向左分步射击
                     }
-                    // —— 阶段2：左右已对准 → 只调前后，左右冻结 ——
                     else
                     {
-                        if (fabs(current_z - z_target_distance) < deadband_z)
-                        {
-                            cmd_vel.linear.x = 0;    // 死区内：不前后，防蛇形
-                        }
-                        else
-                        {
-                            cmd_vel.linear.x = Kp * 0.3 * (current_z - z_target_distance);
-                        }
-                        cmd_vel.angular.z = 0;       // 左右冻结
+                        StepShoot(cmd_vel_pub_, true); // 偏右 -> 向右分步射击
                     }
 
-                    // x和z都对准了 → 精确射击（只射一次，防重复）
-                    if (x_ok && z_ok && !precise_shot_done_)
-                    {
-                        ROS_INFO("Aligned! Precise shot! x=%.4f z=%.4f", current_x, current_z);
-                        shoot_client.call(empty_srv);
-                        precise_shot_done_ = true;
-                        doPostShootAction();
-                        return;
-                    }
+                    ROS_INFO(">>> Step shoot finished! Exiting immediately to next target. <<<");
 
-                    // 2秒超时 → 不管对没对准，执行射后动作
-                    ros::Duration elapsed = ros::Time::now() - adjust_start_time_;
-                    if (elapsed.toSec() >= adjust_timeout_)
-                    {
-                        ROS_INFO("Timeout %.1fs! x=%.4f z=%.4f. Post-shoot anyway.",
-                                 elapsed.toSec(), current_x, current_z);
-                        doPostShootAction();
-                        return;
-                    }
+                    // // 4. 快速后退微调（后退0.5秒脱离靶位，防止转弯撞靶；若不需要可直接注释）
+                    // cmd_vel.linear.x = -0.07;
+                    // cmd_vel.angular.z = 0.0;
+                    // ros::Rate loop_rate(10);
+                    // int count = 0;
+                    // while (ros::ok() && count < 5) // 0.5秒
+                    // {
+                    //     cmd_vel_pub_.publish(cmd_vel);
+                    //     loop_rate.sleep();
+                    //     count++;
+                    // }
 
-                    ROS_INFO("Adjusting %.1fs | x=%.4f(%s) z=%.4f(%s)",
-                             elapsed.toSec(),
-                             current_x, x_ok ? "OK" : "ADJ",
-                             current_z, z_ok ? "OK" : "ADJ");
+                    // 5. 停止
+                    cmd_vel.linear.x = 0.0;
+                    cmd_vel.angular.z = 0.0;
+                    cmd_vel_pub_.publish(cmd_vel);
+
+                    // 6. 立即设置正常退出状态并关闭节点
+                    ros::param::set("/apriltag_exit_status", "normal_exit");
+                    ros::shutdown(); // 立即终止当前节点，外部主控脚本捕获后即刻调度下一个导航点
+                    return;
                 }
-
+                else if (fabs(current_x) > target_x_tolerance)
+                {
+                    if (fabs(fabs(current_x) - target_x_tolerance) < 0.0065)
+                    {
+                        cmd_vel.angular.z = 8 * (-current_x);
+                    }
+                    else
+                    {
+                        cmd_vel.angular.z = Kp * (-current_x);
+                    }
+                }
+                else if (fabs(current_z - z_target_distance) > target_z_tolerance)
+                {
+                    cmd_vel.linear.x = Kp * 0.3 * (current_z - z_target_distance);
+                }
+                target_found = true;
                 break;
             }
         }
 
-        // ================================================================
-        // 未找到tag
-        // ================================================================
-        if (!target_found)
+        if (!target_found && !is_shoot_or_down)
         {
-            shoot_client.call(empty_srv);
-            if (state_ == ADJUSTING)
+            if (!is_backing_up_)
             {
-                // 微调中丢失tag → 检查超时
-                ros::Duration elapsed = ros::Time::now() - adjust_start_time_;
-                if (elapsed.toSec() >= adjust_timeout_)
-                {
-                    ROS_INFO("Tag lost + timeout. Post-shoot.");
-                    doPostShootAction();
-                    return;
-                }
-                ROS_INFO("Tag lost during adjust, waiting %.1fs...", elapsed.toSec());
-                // 不发速度，原地等tag重新出现
+                is_backing_up_ = true;
+                backup_start_time_ = ros::Time::now();
+                ROS_INFO("Starting backup, target tag not detected");
             }
-            else // SEARCHING
+
+            ros::Duration backup_elapsed = ros::Time::now() - backup_start_time_;
+            if (backup_elapsed.toSec() >= backup_duration_)
             {
-                if (!is_backing_up_)
-                {
-                    is_backing_up_ = true;
-                    backup_start_time_ = ros::Time::now();
-                    ROS_INFO("Tag not found, backing up...");
-                }
-
-                ros::Duration backup_elapsed = ros::Time::now() - backup_start_time_;
-                if (backup_elapsed.toSec() >= backup_duration_)
-                {
-                    ROS_INFO("Backup timeout, giving up this point.");
-                    executeNextTask();
-                    ros::param::set("/apriltag_exit_status", "unnormal_exit");
-                    return;
-                }
-
-                // 后退 + 正弦摆头：光斑走之字形扫靶，横竖条纹都覆盖
-                cmd_vel.linear.x = -0.05;
-                cmd_vel.angular.z = search_swing_amp * sin(2 * M_PI * backup_elapsed.toSec() / search_swing_period);
-
+                ROS_INFO("Backup time reached, executing next task");
+                executeNextTask();
+                ros::param::set("/apriltag_exit_status", "unnormal_exit");
+                return;
             }
+
+            ROS_INFO("Backing up... %.1f seconds elapsed", backup_elapsed.toSec());
+            cmd_vel.linear.x = -0.05;
+            cmd_vel.angular.z = 0;
         }
         else
         {
             if (is_backing_up_)
             {
                 is_backing_up_ = false;
-                ROS_INFO("Tag found, stop backup.");
+                ROS_INFO("Target detected, stopping backup");
             }
         }
-
         cmd_vel_pub_.publish(cmd_vel);
     }
-
-    // ========================================================
-    // 射后动作：右转→左转→后退→退出（保持原逻辑）
-    // ========================================================
-        // ========================================================
-    // 射后动作：停稳 → 后退 + 正弦摆头扫射 1.0s → 停车退出
-    // 激光在检测即射时已常亮（未关），摆动+后退让光斑走之字形
-    // ========================================================
-    void doPostShootAction()
-    {
-        geometry_msgs::Twist cmd_vel;
-        ros::Rate loop_rate(10);
-
-        // 停稳
-        cmd_vel.linear.x = 0;
-        cmd_vel.angular.z = 0;
-        cmd_vel_pub_.publish(cmd_vel);
-
-        // 后退 1.0s + 正弦摆头（光斑之字形扫靶）
-        const double swing_amp   = 0.175;   // 摆幅 rad ≈ ±8.6°（现场调 0.10~0.20）
-        const double swing_period = 1.0;   // 摆动周期 s
-        int count = 0;
-        cmd_vel.linear.x = -0.05;          // 后退速度（可调）
-        while (ros::ok() && count < 15)    // 10 步 = 1.0s
-        {
-            double t = count * 0.1;        // 当前时刻（s）
-            cmd_vel.angular.z = swing_amp * sin(2 * M_PI * t / swing_period);
-            cmd_vel_pub_.publish(cmd_vel);
-            loop_rate.sleep();
-            count++;
-        }
-
-        // 停车
-        cmd_vel.linear.x = 0.0;
-        cmd_vel.angular.z = 0.0;
-        cmd_vel_pub_.publish(cmd_vel);
-
-        should_exit_ = true;
-        ros::param::set("/apriltag_exit_status", "normal_exit");
-        ros::shutdown();
-    }
-
 
     void executeNextTask()
     {
+        ROS_INFO("Executing next task (timeout fallback)...");
+
         geometry_msgs::Twist stop_cmd;
         stop_cmd.linear.x = 0;
         stop_cmd.angular.z = 0;
         cmd_vel_pub_.publish(stop_cmd);
 
-        should_exit_ = true;
+       
         ros::shutdown();
+
+        ROS_INFO("Next task execution completed");
     }
 };
 

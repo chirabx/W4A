@@ -28,9 +28,9 @@ void performRetryLogic(MoveBaseClient &ac, ros::Publisher &pub, double x, double
     ros::Rate loop_rate(10);
 
     ROS_INFO("Executing backward retry logic...");
-    vel_msg.linear.x = -0.2;//0.05
+    vel_msg.linear.x = -0.1;
     count = 0;
-    while (ros::ok() && count < 15)
+    while (ros::ok() && count < 10)
     {
         pub.publish(vel_msg);
         loop_rate.sleep();
@@ -63,57 +63,41 @@ void Move_safe(ros::Publisher &pub, double linear_x, double linear_y, double dis
     vel_msg.linear.y = 0.0;
     pub.publish(vel_msg);
 }
-void Turn_safe_1(ros::Publisher &pub, double angular_z, double distance)
+
+void SwingAndShoot(ros ::Publisher &pub)
 {
     geometry_msgs::Twist vel_msg;
-    vel_msg.angular.z = angular_z;
-    int count = 0;
     ros::Rate loop_rate(10);
-    while (ros::ok() && count < distance)
+    ROS_INFO("Laser ON, starting swing...");
+    // 参数
+    const double swing_speed = 0.15;      // 角速度 rad/s
+    const double swing_angle = 0.175;   // 20度 = π/6 弧度
+    const int one_way_steps = (int)(swing_angle / swing_speed / 0.1);  // 约10步
+    // 左摆20度
+    vel_msg.angular.z = swing_speed;
+    for (int i = 0; i < one_way_steps && ros::ok(); i++)
     {
         pub.publish(vel_msg);
-        ros::spinOnce();
         loop_rate.sleep();
-        count++;
     }
-    // 停下
-    vel_msg.angular.z = 0.0;
+    // 右摆40度（从左20度 → 右20度）
+    vel_msg.angular.z = -swing_speed;
+    for (int i = 0; i < one_way_steps * 2 && ros::ok(); i++)
+    {
+        pub.publish(vel_msg);
+        loop_rate.sleep();
+    }
+    // // 回正30度（从右20度 → 中心）
+    // vel_msg.angular.z = swing_speed;
+    // for (int i = 0; i < one_way_steps && ros::ok(); i++)
+    // {
+    //     pub.publish(vel_msg);
+    //     loop_rate.sleep();
+    // }
+    //停止
+    vel_msg.angular.z = 0;
     pub.publish(vel_msg);
 }
-// ================================================================
-// 分段摆动扫射（改造版）：转5° → 停0.5s → 回摆5° → 停0.5s → 离开
-// 纯导航方案：不依赖摄像头，利用 Turn_safe_1 固定时长旋转实现
-// 命中原理：旋转段光斑在靶面移动，扫过 AprilTag 白区/黑框产生亮暗脉冲
-// 激光：调用前由主程序开启（常亮贯穿），本函数不碰激光，
-//       结束后由主程序在去下一航点前统一关闭
-// ================================================================
-void SwingAndShoot(ros::Publisher &pub)
-{
-    ROS_INFO("SwingAndShoot: left 5deg x2, right 5deg x4");
-
-    // 参数（10Hz 步进，每步 0.1s）
-    const double swing_speed = 0.22;   // 0.22 × 0.4s = 0.088rad ≈ 5.04°
-    const int    swing_steps = 4;      // 旋转步数 = 0.4s（≈5°）
-    const int    pause_steps = 8;      // 停顿步数 = 0.5s（若不要停顿，删掉这两行即可）
-
-    // 左转 5° × 2
-    for (int i = 0; i < 1; i++)
-    {
-        Turn_safe_1(pub,  swing_speed, swing_steps);
-        Turn_safe_1(pub,  0.0, pause_steps);
-    }
-
-    // 右转 5° × 4（负号 = 右转）
-    for (int i = 0; i < 2; i++)
-    {
-        Turn_safe_1(pub, -swing_speed, swing_steps);
-        Turn_safe_1(pub,  0.0, pause_steps);
-    }
-
-    ROS_INFO("Swing done, moving to next waypoint.");
-}
-
-
 
 void Move2goal(MoveBaseClient &ac, ros ::Publisher &pub,double x, double y, double yaw, string tag_name)
 {
@@ -171,7 +155,7 @@ int main(int argc, char **argv)
 
     geometry_msgs::Twist vel_msg;
     ros::Publisher pub = nh.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
-    // 【修改】同时声明开启和关闭激光的服务客户端
+    // 同时声明开启和关闭激光的服务客户端
     ros::ServiceClient shoot_close_client = nh.serviceClient<std_srvs::Empty>("/close");
     ros::ServiceClient shoot_open_client = nh.serviceClient<std_srvs::Empty>("/shoot");
     std_srvs::Empty empty_srv;
@@ -180,61 +164,66 @@ int main(int argc, char **argv)
 
     int count = 0;
     ros::Rate loop_rate(10);
-    // 【修改】程序开始时，常开激光
+    // 程序开始时，常开激光
     ros::service::waitForService("/shoot");
     shoot_open_client.call(empty_srv);
     ROS_INFO("Laser ON (Always on until return)");
     
-    // Move_safe(pub,0.0,0.4,30);
-    // Move_safe(pub,0.4,0.0,25);
-    // Move_safe(pub,0.0,0.4,20);
-    // sleep(0.5);
+    //Move_safe(pub,0.0,0.4,25);
+    //Move_safe(pub,0.4,0.0,25);
+   // Move1goal(ac, 0.78, 1.185, 0);
+    sleep(0.5);
 
     // First target point G
-    Move2goal(ac, pub,2.44, 0.77, 0.785, "1");
-    
-    // //Second target point H
-    Move2goal(ac, pub,2.34, 0.01, -0.785, "1");
+    Move2goal(ac, pub,2.43, 0.79, 0.785, "1");
+    // shoot_close_client.call(empty_srv);
 
-    // vel_msg.linear.x = -0.05;
-    // count = 0;
-    // while (ros::ok() && count < 20)
-    // {
-    //     pub.publish(vel_msg);
-    //     loop_rate.sleep();
-    //     count++;
-    // }
-    // // Stop
-    // vel_msg.linear.x = 0.0;
-    // pub.publish(vel_msg);
+    //Move1goal(ac, 0.877, 0.3, 1.57);
+
+    // //Second target point H
+    Move2goal(ac, pub,2.37, 0.01, -0.82, "1");
+    // shoot_close_client.call(empty_srv);
 
     // //Third target point I
-    Move2goal(ac, pub,1.63, 0.07, -2.355, "1");
-    
+    Move2goal(ac, pub,1.58, 0.03, -2.420, "1");
+    // shoot_close_client.call(empty_srv);
+
     // Fourth target point
-    Move2goal(ac, pub,1.59, 2.42, 2.355, "1");
-    
+    Move2goal(ac, pub,1.56, 2.33, 2.2, "1");
+    // shoot_close_client.call(empty_srv);
+    //Move_safe(pub,-0.4,0.0,10);
+    // Move1goal(ac, 1.100, 0.400, 0);
+
     // Fifth target point
-    Move2goal(ac, pub,2.41, 2.36, 0.785, "1");//(2.5,2.41,0.785)
-    
+    Move2goal(ac, pub,2.44, 2.37, 0.95, "1");//(2.5,2.41,0.785)
+    // shoot_close_client.call(empty_srv);
+
     // Sixth target point
-    Move2goal(ac, pub,2.35, 1.51, -0.785, "1");
-    
-    Move1goal(ac,1.40,1.40,-3.14);
-    sleep(0.5);
+    Move2goal(ac, pub,2.39, 1.52, -0.835, "1");
+    // shoot_close_client.call(empty_srv);
+
+    //Move1goal(ac,1.72,1.21,-1.57);两箱子之间
+
     // Seventh target point
-    Move2goal(ac, pub,0.08, 1.74, -2.355, "1");
+    Move2goal(ac, pub,0.04, 1.62, -2.365, "1");
+    // shoot_close_client.call(empty_srv);
 
     // Eighth target point
-    Move2goal(ac, pub,0.06, 2.43, 2.355, "1");//x0.12 y2.50
-    
+    Move2goal(ac, pub,0.08, 2.40, 2.355, "1");
+    // shoot_close_client.call(empty_srv);
+
     // nineth target point
-    Move2goal(ac, pub,0.91, 2.38, 0.785, "1");
+    Move2goal(ac, pub,0.87, 2.34, 0.799, "1");
+    // shoot_close_client.call(empty_srv);
+
+    // Move1goal(ac, 0.55, 0.75, 0);
+    // sleep(0.5);
+    Move1goal(ac, 0.1, 0.1, -1.57);//(0.05,0.05,0)
+    Move_safe(pub,0.0,-0.4,5);
+    Move_safe(pub,0.4,0.0,15);
     
-    Move1goal(ac, 0.05, 0.05, 0);//(0.05,0.05,0)
-    // Move_safe(pub,0.0,-0.4,15);
-    // Move_safe(pub,-0.4,0.0,15);
-    // 【修改】完成所有动作，返回起始点后，关闭激光
+    
+    // 完成所有动作，返回起始点后，关闭激光
     ros::service::waitForService("/close");
     shoot_close_client.call(empty_srv);
     ROS_INFO("Returned to start. Laser OFF.");

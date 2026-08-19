@@ -30,9 +30,6 @@ target_link_libraries(movebase_client_node ${catkin_LIBRARIES})
 add_executable(shoot_robot_node src/shoot_robot.cpp)
 target_link_libraries(shoot_robot_node ${catkin_LIBRARIES})
 
-add_executable(shoot_robot_base_node src/shoot_robot_base.cpp)
-target_link_libraries(shoot_robot_base_node ${catkin_LIBRARIES})
-
 add_executable(shoot_robot_last_node src/shoot_robot_last.cpp)
 target_link_libraries(shoot_robot_last_node ${catkin_LIBRARIES})
 

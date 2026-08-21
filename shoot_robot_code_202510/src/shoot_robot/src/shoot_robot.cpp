@@ -189,13 +189,13 @@ int main(int argc, char **argv)
     // shoot_close_client.call(empty_srv);
 
     // Fourth target point
-    Move2goal(ac, pub,1.56, 2.33, 2.2, "1");
+    Move2goal(ac, pub,1.56, 2.36, 2.2, "1");
     // shoot_close_client.call(empty_srv);
     //Move_safe(pub,-0.4,0.0,10);
     // Move1goal(ac, 1.100, 0.400, 0);
 
     // Fifth target point
-    Move2goal(ac, pub,2.44, 2.37, 0.95, "1");//(2.5,2.41,0.785)
+    Move2goal(ac, pub,2.44, 2.37, 0.85, "1");//(2.5,2.41,0.785)
     // shoot_close_client.call(empty_srv);
 
     // Sixth target point
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
     // shoot_close_client.call(empty_srv);
 
     // nineth target point
-    Move2goal(ac, pub,0.87, 2.34, 0.799, "1");
+    Move2goal(ac, pub,0.87, 2.35, 0.799, "1");
     // shoot_close_client.call(empty_srv);
 
     // Move1goal(ac, 0.55, 0.75, 0);

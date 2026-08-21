@@ -213,7 +213,7 @@ int main(int argc, char **argv)
     // shoot_close_client.call(empty_srv);
 
     // nineth target point
-    Move2goal(ac, pub,0.87, 2.35, 0.799, "1");
+    Move2goal(ac, pub,0.89, 2.35, 0.799, "1");
     // shoot_close_client.call(empty_srv);
 
     // Move1goal(ac, 0.55, 0.75, 0);

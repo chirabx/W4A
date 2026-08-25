@@ -69,9 +69,9 @@ void SwingAndShoot(ros ::Publisher &pub)
     geometry_msgs::Twist vel_msg;
     ros::Rate loop_rate(10);
     ROS_INFO("Laser ON, starting swing...");
-    // 参数
-    const double swing_speed = 0.15;      // 角速度 rad/s
-    const double swing_angle = 0.175;   // 20度 = π/6 弧度
+    // 参数one_way_steps * 2
+    const double swing_speed = 0.20;      // 角速度 rad/s
+    const double swing_angle = 0.262;   // 20度 = π/6 弧度
     const int one_way_steps = (int)(swing_angle / swing_speed / 0.1);  // 约10步
     // 左摆20度
     vel_msg.angular.z = swing_speed;
@@ -82,7 +82,7 @@ void SwingAndShoot(ros ::Publisher &pub)
     }
     // 右摆40度（从左20度 → 右20度）
     vel_msg.angular.z = -swing_speed;
-    for (int i = 0; i < one_way_steps * 2 && ros::ok(); i++)
+    for (int i = 0; i < one_way_steps * 1.5 && ros::ok(); i++)
     {
         pub.publish(vel_msg);
         loop_rate.sleep();
@@ -175,7 +175,7 @@ int main(int argc, char **argv)
     sleep(0.5);
 
     // First target point G
-    Move2goal(ac, pub,2.43, 0.79, 0.785, "1");
+    Move2goal(ac, pub,2.41, 0.77, 0.785, "1");
     // shoot_close_client.call(empty_srv);
 
     //Move1goal(ac, 0.877, 0.3, 1.57);
@@ -185,21 +185,21 @@ int main(int argc, char **argv)
     // shoot_close_client.call(empty_srv);
 
     // //Third target point I
-    Move2goal(ac, pub,1.58, 0.03, -2.420, "1");
+    Move2goal(ac, pub,1.60, 0.02, -2.420, "1");
     // shoot_close_client.call(empty_srv);
 
     // Fourth target point
-    Move2goal(ac, pub,1.56, 2.36, 2.2, "1");
+    Move2goal(ac, pub,1.58, 2.34, 2.2, "1");
     // shoot_close_client.call(empty_srv);
     //Move_safe(pub,-0.4,0.0,10);
     // Move1goal(ac, 1.100, 0.400, 0);
 
     // Fifth target point
-    Move2goal(ac, pub,2.44, 2.37, 0.85, "1");//(2.5,2.41,0.785)
+    Move2goal(ac, pub,2.40, 2.33, 0.85, "1");//(2.5,2.41,0.785)
     // shoot_close_client.call(empty_srv);
 
     // Sixth target point
-    Move2goal(ac, pub,2.39, 1.52, -0.835, "1");
+    Move2goal(ac, pub,2.36, 1.52, -0.835, "1");
     // shoot_close_client.call(empty_srv);
 
     //Move1goal(ac,1.72,1.21,-1.57);两箱子之间
@@ -209,17 +209,18 @@ int main(int argc, char **argv)
     // shoot_close_client.call(empty_srv);
 
     // Eighth target point
-    Move2goal(ac, pub,0.08, 2.40, 2.355, "1");
+    Move2goal(ac, pub,0.06, 2.39, 2.355, "1");
     // shoot_close_client.call(empty_srv);
 
     // nineth target point
-    Move2goal(ac, pub,0.89, 2.35, 0.799, "1");
+    Move2goal(ac, pub,0.86, 2.32, 0.799, "1");
     // shoot_close_client.call(empty_srv);
 
     // Move1goal(ac, 0.55, 0.75, 0);
     // sleep(0.5);
     Move1goal(ac, 0.1, 0.1, -1.57);//(0.05,0.05,0)
-    Move_safe(pub,0.0,-0.4,5);
+    Move_safe(pub,0.0,-0.4,8);
+    sleep(0.3);
     Move_safe(pub,0.4,0.0,15);
     
     

@@ -7,6 +7,7 @@
 #include <std_srvs/Empty.h>
 #include <geometry_msgs/Twist.h>
 
+
 using namespace std;
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
@@ -44,6 +45,8 @@ void performRetryLogic(MoveBaseClient &ac, ros::Publisher &pub, double x, double
     Move2goal(ac, pub, x, y, yaw, tag_name);
 }
 
+
+
 void Move_safe(ros::Publisher &pub, double linear_x, double linear_y, double distance)
 {
     geometry_msgs::Twist vel_msg;
@@ -75,18 +78,18 @@ void SwingAndShoot(ros ::Publisher &pub)
     const int one_way_steps = (int)(swing_angle / swing_speed / 0.1);  // 约10步
     // 左摆20度
     vel_msg.angular.z = swing_speed;
-    for (int i = 0; i < one_way_steps && ros::ok(); i++)
+    for (int i = 0; i < one_way_steps * 2.0 && ros::ok(); i++)
     {
         pub.publish(vel_msg);
         loop_rate.sleep();
     }
     // 右摆40度（从左20度 → 右20度）
-    vel_msg.angular.z = -swing_speed;
-    for (int i = 0; i < one_way_steps * 1.5 && ros::ok(); i++)
-    {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
-    }
+    // vel_msg.angular.z = -swing_speed;
+    // for (int i = 0; i < one_way_steps * 1.5 && ros::ok(); i++)
+    // {
+    //     pub.publish(vel_msg);
+    //     loop_rate.sleep();
+    // }
     // // 回正30度（从右20度 → 中心）
     // vel_msg.angular.z = swing_speed;
     // for (int i = 0; i < one_way_steps && ros::ok(); i++)
@@ -174,54 +177,26 @@ int main(int argc, char **argv)
    // Move1goal(ac, 0.78, 1.185, 0);
     sleep(0.5);
 
-    // First target point G
-    Move2goal(ac, pub,2.41, 0.77, 0.785, "1");
-    // shoot_close_client.call(empty_srv);
+    //Move2goal(ac, pub,0.807, -0.788, -0.939, "1");
 
-    //Move1goal(ac, 0.877, 0.3, 1.57);
-
-    // //Second target point H
-    Move2goal(ac, pub,2.37, 0.01, -0.82, "1");
-    // shoot_close_client.call(empty_srv);
-
-    // //Third target point I
-    Move2goal(ac, pub,1.60, 0.02, -2.420, "1");
-    // shoot_close_client.call(empty_srv);
-
-    // Fourth target point
-    Move2goal(ac, pub,1.58, 2.34, 2.2, "1");
-    // shoot_close_client.call(empty_srv);
-    //Move_safe(pub,-0.4,0.0,10);
-    // Move1goal(ac, 1.100, 0.400, 0);
-
-    // Fifth target point
-    Move2goal(ac, pub,2.40, 2.33, 0.85, "1");//(2.5,2.41,0.785)
-    // shoot_close_client.call(empty_srv);
-
-    // Sixth target point
-    Move2goal(ac, pub,2.36, 1.52, -0.835, "1");
-    // shoot_close_client.call(empty_srv);
-
-    //Move1goal(ac,1.72,1.21,-1.57);两箱子之间
-
-    // Seventh target point
-    Move2goal(ac, pub,0.04, 1.62, -2.365, "1");
-    // shoot_close_client.call(empty_srv);
-
-    // Eighth target point
-    Move2goal(ac, pub,0.06, 2.39, 2.355, "1");
-    // shoot_close_client.call(empty_srv);
-
-    // nineth target point
-    Move2goal(ac, pub,0.86, 2.32, 0.799, "1");
-    // shoot_close_client.call(empty_srv);
-
-    // Move1goal(ac, 0.55, 0.75, 0);
-    // sleep(0.5);
-    Move1goal(ac, 0.1, 0.1, -1.57);//(0.05,0.05,0)
-    Move_safe(pub,0.0,-0.4,8);
-    sleep(0.3);
-    Move_safe(pub,0.4,0.0,15);
+    // 1 rad/s 逆时针转 90°
+    
+    Move2goal(ac, pub,0.91, -0.90, -1.134, "1");
+    Move2goal(ac, pub,0.887, 1.53, 0.436, "1");
+    Move2goal(ac, pub,0.076, 1.526, 2.006, "1");
+    Move2goal(ac, pub,0.123, 0.820, -2.281, "1");
+    Move_safe(pub,-0.4,0.0,10);
+    Move2goal(ac, pub,1.622, -0.837, -2.700, "1");
+    Move2goal(ac, pub,2.394, -0.867, -1.134, "1");
+    Move2goal(ac, pub,2.471, -0.363, 0.947, "1");
+    Move_safe(pub,-0.4,0.0,10);
+    Move2goal(ac, pub,1.658, 1.519, 2.006, "1");
+    Move2goal(ac, pub,2.412, 1.344, 0.455, "3");  //2.452  1.454  
+    
+    // Move1goal(ac, 0.1, 0.1, -1.57);//(0.05,0.05,0)
+    // Move_safe(pub,0.0,-0.4,8);
+    // sleep(0.3);
+    // Move_safe(pub,0.4,0.0,15);
     
     
     // 完成所有动作，返回起始点后，关闭激光

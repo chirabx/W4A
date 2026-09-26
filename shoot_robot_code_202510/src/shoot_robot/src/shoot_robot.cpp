@@ -100,6 +100,25 @@ void Move2goal(MoveBaseClient &ac, double x, double y, double yaw, string tag_na
     // sleep(0.5);
 }
 
+
+void Turn_safe_1(ros::Publisher &pub, double angular_z, double distance)
+{
+    geometry_msgs::Twist vel_msg;
+    vel_msg.angular.z = angular_z;
+    int count = 0;
+    ros::Rate loop_rate(10);
+    while (ros::ok() && count < distance)
+    {
+        pub.publish(vel_msg);
+        ros::spinOnce();
+        loop_rate.sleep();
+        count++;
+    }
+    // 停下
+    vel_msg.angular.z = 0.0;
+    pub.publish(vel_msg);
+}
+
 void Move1goal(MoveBaseClient &ac, double x, double y, double yaw)
 {
     tf2::Quaternion quaternion;
@@ -139,87 +158,39 @@ int main(int argc, char **argv)
     // Move_safe(pub, 0.4, 0.0, 30);
    
 
-     // First target point
-    Move2goal(ac, 0.949, -0.950, -0.96, "1");//2.56, 0.84, 0.785
+    Move2goal(ac, 0.91, -0.90, -1.134, "1");
     shoot_close_client.call(empty_srv);
 
-    // Second target point
-    //Move2goal(ac, pub, 1.020, 1.603, 0.510, "1");//2.36, -0.014, -0.685//kongdi 
-    Move2goal(ac, 0.870, 1.703, 0.510, "1");//2.36, -0.014, -0.685//youzhangaiwu
+    Move2goal(ac, 0.887, 1.53, 0.456, "3");
     shoot_close_client.call(empty_srv);
 
-    // vel_msg.linear.x = -0.05;
-    // count = 0;
-    // while (ros::ok() && count < 20)
-    // {
-    //     pub.publish(vel_msg);
-    //     loop_rate.sleep();
-    //     count++;
-    // }
-    // // Stop
-    // vel_msg.linear.x = 0.0;
-    // pub.publish(vel_msg);
-
-    // Third target point
-    //Move2goal(ac, pub, 0.151, 1.540, 2.180, "1");//1.581, 0.116, -2.355//kongdi
-    Move2goal(ac, 0.141, 1.440, 2.180, "1");//1.581, 0.116, -2.355//youzhangaiwu
+    Move2goal(ac, 0.076, 1.526, 2.006, "1");
     shoot_close_client.call(empty_srv);
 
-
-    // Fourth target point
-    //Move2goal(ac, pub, 0.120, 0.718, -2.429, "1");//kd
-    Move2goal(ac, 0.280, 0.718, -2.229, "1");//yzw
+    Move2goal(ac, 0.123, 0.820, -2.281, "2");
     shoot_close_client.call(empty_srv);
 
-    vel_msg.linear.x = -0.20;
-    count = 0;
-    while (ros::ok() && count < 25)
-    {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
-        count++;
-    }
-    // Stop
-    vel_msg.linear.x = 0.0;
-    pub.publish(vel_msg);
+    Move_safe(pub,-0.4,0.0,10);
 
-    //Move2goal(ac, pub, 1.500, 0.700, 0, "1");
-
-    // Fifth target point
-    Move2goal(ac, 1.681, -0.860, -2.429, "1");
-    shoot_close_client.call(empty_srv);
-    // Sixth target point
-    Move2goal(ac, 2.551, -0.783, -0.96, "1");//2.39, 1.49, -0.685
-    shoot_close_client.call(empty_srv);
-    //Move2goal(ac, pub, 2.38, 1.51, -0.685, "1");//kongdi
-
-    // Seventh target point
-    Move2goal(ac, 2.506, -0.153, 0.710, "1");
+    Move2goal(ac, 1.632, -0.867, -2.700, "1");
     shoot_close_client.call(empty_srv);
 
-    vel_msg.linear.x = -0.20;
-    count = 0;
-    while (ros::ok() && count < 25)
-    {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
-        count++;
-    }
-    // Stop
-    vel_msg.linear.x = 0.0;
-    pub.publish(vel_msg);
-    // Eighth target point
-    Move2goal(ac, 1.634, 1.514, 2.180, "1");//0.14, 2.45, 2.355
+    Move2goal(ac, 2.394, -0.867, -1.134, "1");
     shoot_close_client.call(empty_srv);
-    // Move2goal(ac, pub, 0.14, 2.45, 2.355, "1");//kongdi
 
-    // Ninth target point
-    Move2goal(ac, 2.550, 1.553, 0.710, "1");//0.93, 2.37, 0.785
+    Move2goal(ac, 2.471, -0.363, 0.947, "1");
     shoot_close_client.call(empty_srv);
-    // Move2goal(ac, pub, 0.93, 2.33, 0.785, "1");//kongdi
-    // 【修改】完成所有动作，返回起始点后，关闭激光
-    
 
-    
+    Move_safe(pub,-0.4,0.0,10);
+
+    Move2goal(ac, 1.668, 1.509, 2.006, "1");
+    //shoot_close_client.call(empty_srv);
+
+    Move2goal(ac, 2.412, 1.344, 0.465, "3");
+    //shoot_close_client.call(empty_srv);
+    Turn_safe_1(pub, 0.1, 30);
+    Turn_safe_1(pub, -0.1, 30);
+
+
     return 0;
 }

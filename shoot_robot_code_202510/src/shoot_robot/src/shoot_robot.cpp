@@ -182,16 +182,17 @@ int main(int argc, char **argv)
     // 1 rad/s 逆时针转 90°
     
     Move2goal(ac, pub,0.91, -0.90, -1.134, "1");
-    Move2goal(ac, pub,0.935, 1.44, 0.506, "1");
+    Move2goal(ac, pub,0.9, 1.53, 0.506, "1");
     Move2goal(ac, pub,0.096, 1.506, 2.006, "1");
-    Move2goal(ac, pub,0.123, 0.810, -2.321, "1");
+    Move2goal(ac, pub,0.11, 0.62, -2.321, "1");
     Move_safe(pub,-0.4,0.0,13);
-    Move2goal(ac, pub,1.622, -0.837, -2.600, "1");
+    Move1goal(ac, 1.60, 0.6, 0);
+    Move2goal(ac, pub,1.605, -0.843, -2.600, "1");
     Move2goal(ac, pub,2.394, -0.867, -1.184, "1");
-    Move2goal(ac, pub,2.471, -0.333, 0.947, "1");
+    Move2goal(ac, pub,2.461, -0.2, 0.947, "1");
     Move_safe(pub,-0.4,0.0,10);
-    Move2goal(ac, pub,1.658, 1.519, 2.006, "1");
-    Move2goal(ac, pub,2.412, 1.344, 0.555, "3");  //2.452  1.454  
+    Move2goal(ac, pub,1.65, 1.53, 2.006, "1");
+    Move2goal(ac, pub,2.49, 1.38, 0.555, "3");  //2.452  1.454  
     
     // Move1goal(ac, 0.1, 0.1, -1.57);//(0.05,0.05,0)
     // Move_safe(pub,0.0,-0.4,8);

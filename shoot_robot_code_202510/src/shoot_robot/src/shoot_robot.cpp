@@ -74,7 +74,7 @@ void SwingAndShoot(ros ::Publisher &pub)
     ROS_INFO("Laser ON, starting swing...");
     // 参数one_way_steps * 2
     const double swing_speed = 0.20;      // 角速度 rad/s
-    const double swing_angle = 0.262;   // 20度 = π/6 弧度
+    const double swing_angle = 0.28;   // 20度 = π/6 弧度
     const int one_way_steps = (int)(swing_angle / swing_speed / 0.1);  // 约10步
     // 左摆20度
     vel_msg.angular.z = swing_speed;
@@ -182,16 +182,16 @@ int main(int argc, char **argv)
     // 1 rad/s 逆时针转 90°
     
     Move2goal(ac, pub,0.91, -0.90, -1.134, "1");
-    Move2goal(ac, pub,0.887, 1.53, 0.436, "1");
-    Move2goal(ac, pub,0.076, 1.526, 2.006, "1");
-    Move2goal(ac, pub,0.123, 0.820, -2.281, "1");
-    Move_safe(pub,-0.4,0.0,10);
-    Move2goal(ac, pub,1.622, -0.837, -2.700, "1");
-    Move2goal(ac, pub,2.394, -0.867, -1.134, "1");
-    Move2goal(ac, pub,2.471, -0.363, 0.947, "1");
+    Move2goal(ac, pub,0.935, 1.44, 0.506, "1");
+    Move2goal(ac, pub,0.096, 1.506, 2.006, "1");
+    Move2goal(ac, pub,0.123, 0.810, -2.321, "1");
+    Move_safe(pub,-0.4,0.0,13);
+    Move2goal(ac, pub,1.622, -0.837, -2.600, "1");
+    Move2goal(ac, pub,2.394, -0.867, -1.184, "1");
+    Move2goal(ac, pub,2.471, -0.333, 0.947, "1");
     Move_safe(pub,-0.4,0.0,10);
     Move2goal(ac, pub,1.658, 1.519, 2.006, "1");
-    Move2goal(ac, pub,2.412, 1.344, 0.455, "3");  //2.452  1.454  
+    Move2goal(ac, pub,2.412, 1.344, 0.555, "3");  //2.452  1.454  
     
     // Move1goal(ac, 0.1, 0.1, -1.57);//(0.05,0.05,0)
     // Move_safe(pub,0.0,-0.4,8);
@@ -200,8 +200,8 @@ int main(int argc, char **argv)
     
     
     // 完成所有动作，返回起始点后，关闭激光
-    ros::service::waitForService("/close");
-    shoot_close_client.call(empty_srv);
-    ROS_INFO("Returned to start. Laser OFF.");
+    // ros::service::waitForService("/close");
+    // shoot_close_client.call(empty_srv);
+    // ROS_INFO("Returned to start. Laser OFF.");
     return 0;
 }

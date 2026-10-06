@@ -17,6 +17,7 @@ void Move1goal(MoveBaseClient &ac, double x, double y, double yaw);
 void performRetryLogic(MoveBaseClient &ac, ros::Publisher &pub, double x, double y, double yaw, const std::string &tag_name);
 void SwingAndShoot(ros::Publisher &pub, double swing_speed, double swing_angle, int swing_times);
 void SwingAndShootright(ros::Publisher &pub, double swing_speed, double swing_angle, int swing_times);
+void Turn_safe_1(ros::Publisher &pub, double angular_z, double distance);
 void sleep(double second)
 {
     ros::Duration(second).sleep();
@@ -45,6 +46,24 @@ void performRetryLogic(MoveBaseClient &ac, ros::Publisher &pub, double x, double
 
     ROS_INFO("Retrying to move to target point (%.3f, %.3f, %.3f)", x, y, yaw);
     Move2goal(ac, pub, x, y, yaw, tag_name);
+}
+
+void Turn_safe_1(ros::Publisher &pub, double angular_z, double distance)
+{
+    geometry_msgs::Twist vel_msg;
+    vel_msg.angular.z = angular_z;
+    int count = 0;
+    ros::Rate loop_rate(10);
+    while (ros::ok() && count < distance)
+    {
+        pub.publish(vel_msg);
+        ros::spinOnce();
+        loop_rate.sleep();
+        count++;
+    }
+    // 停下
+    vel_msg.angular.z = 0.0;
+    pub.publish(vel_msg);
 }
 
 void Move_safe(ros::Publisher &pub, double linear_x, double linear_y, double distance)
@@ -234,6 +253,8 @@ int main(int argc, char **argv)
 
     // ========== 打靶流程:到点 -> 摆射 ==========
     // 摆射参数直接在调用处填:(速度rad/s, 角度度, 次数)
+    Turn_safe_1(pub, 0.3, 10);
+    Move_safe(pub, 0.7, 0.0, 45);
 
     // First target point
     Move2goal(ac, pub, 1.611, 1.417, 2.305, "1");//0.14, 2.45, 2.355

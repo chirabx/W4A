@@ -15,6 +15,7 @@ typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseCl
 void Move2goal(MoveBaseClient &ac, ros::Publisher &pub,double x, double y, double yaw);
 void performRetryLogic(MoveBaseClient &ac, ros::Publisher &pub, double x, double y, double yaw);
 void SwingAndShoot(ros::Publisher &pub, double swing_speed, double swing_angle, int swing_times);
+void Turn_safe_1(ros::Publisher &pub, double angular_z, double distance);
 void sleep(double second)
 {
     ros::Duration(second).sleep();
@@ -43,6 +44,24 @@ void performRetryLogic(MoveBaseClient &ac, ros::Publisher &pub, double x, double
 
     ROS_INFO("Retrying to move to target point (%.3f, %.3f, %.3f)", x, y, yaw);
     Move2goal(ac, pub, x, y, yaw);
+}
+
+void Turn_safe_1(ros::Publisher &pub, double angular_z, double distance)
+{
+    geometry_msgs::Twist vel_msg;
+    vel_msg.angular.z = angular_z;
+    int count = 0;
+    ros::Rate loop_rate(10);
+    while (ros::ok() && count < distance)
+    {
+        pub.publish(vel_msg);
+        ros::spinOnce();
+        loop_rate.sleep();
+        count++;
+    }
+    // 停下
+    vel_msg.angular.z = 0.0;
+    pub.publish(vel_msg);
 }
 
 void Move_safe(ros::Publisher &pub, double linear_x, double linear_y, double distance)
@@ -167,64 +186,81 @@ int main(int argc, char **argv)
     ros::service::waitForService("/shoot");
     shoot_open_client.call(empty_srv);
     ROS_INFO("Laser ON (Always on until return)");
+
     // First target point
-    Move2goal(ac, pub, 0.91, -0.90, -1.134);
-    SwingAndShoot(pub, 0.20, 15.0, 1);  
+    Move2goal(ac, pub, 0.775, -0.82, -1.068);
+    SwingAndShoot(pub, 0.15, 25.0, 1);  
+    Turn_safe_1(pub, 1.5708, 13);
+
+
+
 
     // Second target point
-    Move2goal(ac, pub, 0.9, 1.53, 0.506);
-    SwingAndShoot(pub, 0.20, 15.0, 1); 
+    Move2goal(ac, pub, 0.9438, 1.437, 0.657);
+    SwingAndShoot(pub, 0.15, 25.0, 1); 
+    Turn_safe_1(pub, 1.5708, 13);
+
+
+
 
     // Third target point
-    Move2goal(ac, pub, 0.096, 1.506, 2.006);
-    SwingAndShoot(pub, 0.20, 15.0, 1);
+    Move2goal(ac, pub, 0.11, 1.48, 1.975);
+    SwingAndShoot(pub, 0.15, 25.0, 1);
+    
+    Turn_safe_1(pub, 1.5708, 13);
+
+
 
     // Fourth target point
-    Move2goal(ac, pub, 0.11, 0.62, -2.321);
-    SwingAndShoot(pub, 0.20, 15.0, 1);
+    Move2goal(ac, pub, 0.034, 0.875, -2.056);
+    // Turn_safe_1(pub, 0.4998, 10);       // 左转 28.64°，车头对准第四个点
+    //Move_safe(pub, -0.2439, 0.0, 25);    // 前进 0.6098 m（60.98 cm）
+    // Turn_safe_1(pub, -0.4671, 6);       // 右转 16.06°，转到要求的朝向 -1.976 rad
+    SwingAndShoot(pub, 0.10, 20.0, 1);
 
-    vel_msg.linear.x = -0.20;
-    count = 0;
-    while (ros::ok() && count < 25)
-    {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
-        count++;
-    }
+    Move_safe(pub, -0.20, 0.0, 15);
+    Turn_safe_1(pub, 0.5236, 26);
+    Move_safe(pub, 0.25, 0.0, 20);
+    Turn_safe_1(pub, -0.5236, 15);
 
 
     // Fifth target point
-    Move2goal(ac, pub, 1.605, -0.843, -2.600);
-    SwingAndShoot(pub, 0.20, 15.0, 1);
+    Move2goal(ac, pub, 1.600, -0.8704, -2.5077);
+    SwingAndShoot(pub, 0.15, 25.0, 1);
+    Turn_safe_1(pub, 1.5708, 13);
+
+
+
 
     // Sixth target point
-    Move2goal(ac, pub, 2.394, -0.867, -1.184);
-    SwingAndShoot(pub, 0.20, 15.0, 1);
+    Move2goal(ac, pub, 2.306, -0.8104, -1.167);
+    SwingAndShoot(pub, 0.15, 25.0, 1);
+    Turn_safe_1(pub, 1.5708, 13);
+
+
+
 
     // Seventh target point
-    Move2goal(ac, pub, 2.461, -0.2, 0.947);
-    SwingAndShoot(pub, 0.20, 15.0, 1);
+    Move2goal(ac, pub, 2.539, -0.304, 1.141);
+    SwingAndShoot(pub, 0.10, 20.0, 1);
 
-    vel_msg.linear.x = -0.20;
-    count = 0;
-    while (ros::ok() && count < 15)
-    {
-        pub.publish(vel_msg);
-        loop_rate.sleep();
-        count++;
-    }
-    // Stop
-    vel_msg.linear.x = 0.0;
-    pub.publish(vel_msg);
+    Move_safe(pub, -0.20, 0.0, 15);
+    Turn_safe_1(pub, 0.5236, 19);
+    Move_safe(pub, 0.25, 0.0, 25);
+    Turn_safe_1(pub, -0.5236, 8);
+    
+    //Move_safe(pub, 0.25, 0.0, 20);
 
 
     // Eighth target point
-    Move2goal(ac, pub, 1.65, 1.53, 2.006);
-    SwingAndShoot(pub, 0.20, 15.0, 1);
+    Move2goal(ac, pub, 1.70, 1.45, 2.199);
+    SwingAndShoot(pub, 0.15, 25.0, 1);
+    Turn_safe_1(pub, -0.5236, 25);
+
 
     // Ninth target point
-    Move2goal(ac, pub, 2.49, 1.38, 0.555);
-    SwingAndShoot(pub, 0.20, 15.0, 3);
+    Move2goal(ac, pub, 2.460, 1.310, 0.843);
+    SwingAndShoot(pub, 0.15, 20.0, 9);
 
 
     // 【修改】完成所有动作，返回起始点后，关闭激光

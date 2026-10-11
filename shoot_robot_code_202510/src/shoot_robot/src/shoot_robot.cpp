@@ -188,7 +188,7 @@ int main(int argc, char **argv)
     ROS_INFO("Laser ON (Always on until return)");
 
     // First target point
-    Move2goal(ac, pub, 0.775, -0.82, -1.068);
+    Move2goal(ac, pub, 0.795, -0.80, -1.068);
     SwingAndShoot(pub, 0.15, 25.0, 1);  
     Turn_safe_1(pub, 1.5708, 13);
 
@@ -196,7 +196,7 @@ int main(int argc, char **argv)
 
 
     // Second target point
-    Move2goal(ac, pub, 0.9438, 1.437, 0.657);
+    Move2goal(ac, pub, 0.9838, 1.487, 0.657);
     SwingAndShoot(pub, 0.15, 25.0, 1); 
     Turn_safe_1(pub, 1.5708, 13);
 
@@ -204,7 +204,7 @@ int main(int argc, char **argv)
 
 
     // Third target point
-    Move2goal(ac, pub, 0.11, 1.48, 1.975);
+    Move2goal(ac, pub, 0.09, 1.50, 1.975);
     SwingAndShoot(pub, 0.15, 25.0, 1);
     
     Turn_safe_1(pub, 1.5708, 13);
@@ -212,7 +212,7 @@ int main(int argc, char **argv)
 
 
     // Fourth target point
-    Move2goal(ac, pub, 0.034, 0.875, -2.056);
+    Move2goal(ac, pub, 0.044, 0.855, -2.056);
     // Turn_safe_1(pub, 0.4998, 10);       // 左转 28.64°，车头对准第四个点
     //Move_safe(pub, -0.2439, 0.0, 25);    // 前进 0.6098 m（60.98 cm）
     // Turn_safe_1(pub, -0.4671, 6);       // 右转 16.06°，转到要求的朝向 -1.976 rad
@@ -233,7 +233,7 @@ int main(int argc, char **argv)
 
 
     // Sixth target point
-    Move2goal(ac, pub, 2.306, -0.8104, -1.167);
+    Move2goal(ac, pub, 2.386, -0.9004, -1.167);
     SwingAndShoot(pub, 0.15, 25.0, 1);
     Turn_safe_1(pub, 1.5708, 13);
 
@@ -241,7 +241,7 @@ int main(int argc, char **argv)
 
 
     // Seventh target point
-    Move2goal(ac, pub, 2.539, -0.304, 1.141);
+    Move2goal(ac, pub, 2.509, -0.304, 1.041);
     SwingAndShoot(pub, 0.10, 20.0, 1);
 
     Move_safe(pub, -0.20, 0.0, 15);
@@ -253,7 +253,7 @@ int main(int argc, char **argv)
 
 
     // Eighth target point
-    Move2goal(ac, pub, 1.70, 1.45, 2.199);
+    Move2goal(ac, pub, 1.70, 1.48, 2.199);
     SwingAndShoot(pub, 0.15, 25.0, 1);
     Turn_safe_1(pub, -0.5236, 25);
 

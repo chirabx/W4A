@@ -35,3 +35,6 @@ target_link_libraries(shoot_robot_last_node ${catkin_LIBRARIES})
 
 add_executable(w2u_task_flow_node src/task_flow.cpp)
 target_link_libraries(w2u_task_flow_node ${catkin_LIBRARIES})
+
+add_executable(relocalizer src/relocalizer.cpp)
+target_link_libraries(relocalizer ${catkin_LIBRARIES})

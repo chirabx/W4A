@@ -86,6 +86,32 @@ void Move_safe(ros::Publisher &pub, double linear_x, double linear_y, double dis
     pub.publish(vel_msg);
 }
 
+void Move_safe_smart(ros::NodeHandle &nh, ros::Publisher &pub,
+                     double vx, double vy, int count)
+{
+    Move_safe(pub, vx, vy, count);
+
+    // 等车停稳,否则扫描是拖影,评分不可信
+    ros::Duration(0.3).sleep();
+
+    static ros::ServiceClient cf =
+        nh.serviceClient<std_srvs::Empty>("/reloc/check_fix");
+    std_srvs::Empty e;
+    if (!cf.waitForExistence(ros::Duration(0.5)))
+    {
+        ROS_ERROR("[smart] /reloc/check_fix not available, is relocalizer running?");
+        return;                       // 节点没起就直接跳过,不影响主流程
+    }
+    cf.call(e);
+
+    bool offset = false;
+    ros::param::get("/reloc/offset", offset);
+    if (offset)
+        ROS_WARN("[smart] COLLISION DETECTED -> relocalized");
+    else
+        ROS_INFO("[smart] no collision, continue");
+}
+
 
 void SwingAndShoot(ros::Publisher &pub, double swing_speed, double swing_angle, int swing_times)
 {
@@ -249,16 +275,13 @@ int main(int argc, char **argv)
     ros::service::waitForService("/shoot");
     shoot_open_client.call(empty_srv);
     ROS_INFO("Laser ON (Always on until return)");
-    // sleep(0.5);
 
-    // ========== 打靶流程:到点 -> 摆射 ==========
-    // 摆射参数直接在调用处填:(速度rad/s, 角度度, 次数)
-    Turn_safe_1(pub, 0.3, 10);
-    Move_safe(pub, 0.7, 0.0, 45);
+    Turn_safe_1(pub, 0.15, 5);
+    Move_safe_smart(nh,pub, 0.40, 0.0, 65);
 
     // First target point
     Move2goal(ac, pub, 1.611, 1.417, 2.305, "1");//0.14, 2.45, 2.355
-    SwingAndShoot(pub, 0.20, 15.0, 2);           // 0.2 rad/s, 左右各20度, 摆2段
+    SwingAndShoot(pub, 0.15, 15, 2);           // 0.2 rad/s, 左右各20度, 摆2段
 
     // Ninth target point
     Move2goal(ac, pub, 2.604, 1.021, 1.45, "1");//0.93, 2.37, 0.785
@@ -266,7 +289,7 @@ int main(int argc, char **argv)
 
     // First target point
     Move2goal(ac, pub, 1.611, 1.417, 2.305, "1");//0.14, 2.45, 2.355
-    SwingAndShoot(pub, 0.20, 15.0, 2);           // 0.2 rad/s, 左右各20度, 摆2段
+    SwingAndShoot(pub, 0.10, 10.0, 2);           // 0.2 rad/s, 左右各20度, 摆2段
 
     // Ninth target point
     Move2goal(ac, pub, 2.604, 1.021, 1.45, "1");//0.93, 2.37, 0.785

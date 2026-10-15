@@ -289,7 +289,7 @@ int main(int argc, char **argv)
     else { ROS_WARN("Point 1 unreachable, skip shooting, go next."); }
 
     // Second target point
-    if (Move2goal(ac, pub, 0.9838, 1.487, 0.657))
+    if (Move2goal(ac, pub, 0.9838, 1.507, 0.657))
     {
         SwingAndShoot(pub, 0.15, 25.0, 1);
         Turn_safe_1(pub, 1.5708, 13);
@@ -297,7 +297,7 @@ int main(int argc, char **argv)
     else { ROS_WARN("Point 2 unreachable, skip shooting, go next."); }
 
     // Third target point
-    if (Move2goal(ac, pub, 0.09, 1.50, 1.975))
+    if (Move2goal(ac, pub, 0.09, 1.50, 2.005))
     {
         SwingAndShoot(pub, 0.15, 25.0, 1);
         Turn_safe_1(pub, 1.5708, 13);
@@ -313,7 +313,7 @@ int main(int argc, char **argv)
         SwingAndShoot(pub, 0.10, 20.0, 1);
 
         Move_safe(pub, -0.20, 0.0, 15);
-        Turn_safe_1(pub, 0.5236, 26);
+        Turn_safe_1(pub, 0.5236, 13);
         Move_safe(pub, 0.25, 0.0, 20);
         Turn_safe_1(pub, -0.5236, 15);
     }
@@ -357,7 +357,7 @@ int main(int argc, char **argv)
     else { ROS_WARN("Point 8 unreachable, skip shooting, go next."); }
 
     // Ninth target point
-    if (Move2goal(ac, pub, 2.460, 1.310, 0.843))
+    if (Move2goal(ac, pub, 2.460, 1.360, 0.843))
     {
         SwingAndShoot(pub, 0.15, 20.0, 9);
     }

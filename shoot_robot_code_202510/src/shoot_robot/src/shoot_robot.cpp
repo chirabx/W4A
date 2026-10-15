@@ -7,6 +7,7 @@
 #include <std_srvs/Empty.h>
 #include <geometry_msgs/Twist.h>
 #include <cmath>
+#include <nav_msgs/Odometry.h>
 
 using namespace std;
 
@@ -86,32 +87,56 @@ void Move_safe(ros::Publisher &pub, double linear_x, double linear_y, double dis
     pub.publish(vel_msg);
 }
 
-void Move_safe_smart(ros::NodeHandle &nh, ros::Publisher &pub,
-                     double vx, double vy, int count)
+bool Reloc_Check(ros::NodeHandle &nh, ros::Publisher &pub, bool wait_still = true)
 {
-    Move_safe(pub, vx, vy, count);
+    // 1. 等车停稳 —— 否则激光扫描是拖影,评分不可信
+    if (wait_still)
+    {
+        geometry_msgs::Twist z;
+        for (int i = 0; i < 3 && ros::ok(); ++i)
+        {
+            pub.publish(z);
+            ros::Duration(0.05).sleep();
+        }
+        ros::Time t0 = ros::Time::now();
+        while (ros::ok() && (ros::Time::now() - t0).toSec() < 3.0)
+        {
+            nav_msgs::Odometry::ConstPtr o =
+                ros::topic::waitForMessage<nav_msgs::Odometry>("/odom", nh, ros::Duration(0.3));
+            if (!o) continue;
+            double v = std::abs(o->twist.twist.linear.x) +
+                       std::abs(o->twist.twist.linear.y);
+            if (v < 0.05) break;
+            pub.publish(z);
+            ros::Duration(0.1).sleep();
+        }
+    }
 
-    // 等车停稳,否则扫描是拖影,评分不可信
-    ros::Duration(0.3).sleep();
-
+    // 2. 问 relocalizer:定位偏了没?
     static ros::ServiceClient cf =
         nh.serviceClient<std_srvs::Empty>("/reloc/check_fix");
     std_srvs::Empty e;
+
     if (!cf.waitForExistence(ros::Duration(0.5)))
     {
-        ROS_ERROR("[smart] /reloc/check_fix not available, is relocalizer running?");
-        return;                       // 节点没起就直接跳过,不影响主流程
+        ROS_ERROR("[Reloc] /reloc/check_fix unavailable, relocalizer running?");
+        return true;                    // 节点没起就当正常,不阻塞主流程
     }
+
+    ros::param::set("/reloc/offset", false);
     cf.call(e);
 
+    // 3. 读结果
     bool offset = false;
     ros::param::get("/reloc/offset", offset);
     if (offset)
-        ROS_WARN("[smart] COLLISION DETECTED -> relocalized");
-    else
-        ROS_INFO("[smart] no collision, continue");
+    {
+        ROS_WARN("[Reloc] OFFSET DETECTED -> relocalized!");
+        return false;
+    }
+    ROS_INFO("[Reloc] localization OK");
+    return true;
 }
-
 
 void SwingAndShoot(ros::Publisher &pub, double swing_speed, double swing_angle, int swing_times)
 {
@@ -276,22 +301,26 @@ int main(int argc, char **argv)
     shoot_open_client.call(empty_srv);
     ROS_INFO("Laser ON (Always on until return)");
 
-    Turn_safe_1(pub, 0.15, 5);
-    Move_safe_smart(nh,pub, 0.40, 0.0, 65);
+    // Turn_safe_1(pub, 0.20, 5);  //0.15
+    // Move_safe(pub, 0.40, 0.0, 65);
+    // Reloc_Check(nh, pub); 
 
     // First target point
-    Move2goal(ac, pub, 1.611, 1.417, 2.305, "1");//0.14, 2.45, 2.355
+    Move2goal(ac, pub, 1.671, 1.387, 2.305, "1");//0.14, 2.45, 2.355    x=1.611 y=1.417
     SwingAndShoot(pub, 0.15, 15, 2);           // 0.2 rad/s, 左右各20度, 摆2段
 
     // Ninth target point
+    Reloc_Check(nh, pub); 
     Move2goal(ac, pub, 2.604, 1.021, 1.45, "1");//0.93, 2.37, 0.785
     SwingAndShootright(pub, 0.10, 15.0, 4);           // 0.15 rad/s, 左右各30度, 摆3段
 
     // First target point
-    Move2goal(ac, pub, 1.611, 1.417, 2.305, "1");//0.14, 2.45, 2.355
+    Reloc_Check(nh, pub); 
+    Move2goal(ac, pub, 1.671, 1.387, 2.305, "1");//0.14, 2.45, 2.355
     SwingAndShoot(pub, 0.10, 10.0, 2);           // 0.2 rad/s, 左右各20度, 摆2段
 
     // Ninth target point
+    Reloc_Check(nh, pub); 
     Move2goal(ac, pub, 2.604, 1.021, 1.45, "1");//0.93, 2.37, 0.785
     SwingAndShootright(pub, 0.10, 15.0, 4);           // 0.15 rad/s, 左右各30度, 摆3段
 

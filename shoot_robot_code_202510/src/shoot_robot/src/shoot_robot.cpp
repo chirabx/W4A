@@ -301,33 +301,34 @@ int main(int argc, char **argv)
     shoot_open_client.call(empty_srv);
     ROS_INFO("Laser ON (Always on until return)");
 
-    Turn_safe_1(pub, 0.20, 5);  //0.15
-    Move_safe(pub, 0.40, 0.0, 65);
+    Turn_safe_1(pub, 0.15, 10);  //0.15
+    Move_safe(pub, 0.40, 0.0, 70);
     Reloc_Check(nh, pub); 
 
     // First target point
-    Move2goal(ac, pub, 1.641, 1.3417, 2.305, "1");//0.14, 2.45, 2.355    x=1.611 y=1.417
-    SwingAndShoot(pub,0.10, 15.0, 2);           // 0.2 rad/s, 左右各20度, 摆2段
+    Move2goal(ac, pub, 2.404, 0.851, 2.35, "1");//0.14, 2.45, 2.355    x=1.611 y=1.417
+    SwingAndShoot(pub,0.08, 7.0, 3);           // 0.2 rad/s, 左右各20度, 摆2段
+    Move2goal(ac, pub, 2.404, 0.851, 1.57, "1");
 
     // Ninth target point
     Reloc_Check(nh, pub); 
-    Move2goal(ac, pub, 2.604, 0.961, 1.45, "1");//0.93, 2.37, 0.785
-    SwingAndShootright(pub, 0.10, 15.0, 4);           // 0.15 rad/s, 左右各30度, 摆3段
+    Move_safe(pub, 0.0, -0.20, 20);
+    SwingAndShootright(pub,0.08, 6.0, 3);
+    Reloc_Check(nh, pub);
+    Move_safe(pub, 0.0, 0.10, 10);
 
-    // First target point
-    Reloc_Check(nh, pub); 
-    Move2goal(ac, pub, 1.641, 1.3417, 2.305, "1");//0.14, 2.45, 2.355
-    SwingAndShoot(pub, 0.10, 10.0, 2);           // 0.2 rad/s, 左右各20度, 摆2段
+    Move2goal(ac, pub, 2.404, 0.851, 2.35, "1");//0.14, 2.45, 2.355    x=1.611 y=1.417
+    SwingAndShoot(pub,0.08, 7.0, 3);           // 0.2 rad/s, 左右各20度, 摆2段
+    Move2goal(ac, pub, 2.404, 0.851, 1.57, "1");
 
     // Ninth target point
     Reloc_Check(nh, pub); 
-    Move2goal(ac, pub, 2.604, 0.961, 1.45, "1");//0.93, 2.37, 0.785
-    SwingAndShootright(pub, 0.10, 15.0, 4);           // 0.15 rad/s, 左右各30度, 摆3段
-
+    Move_safe(pub, 0.0, -0.20, 20);
+    SwingAndShootright(pub,0.08, 6.0, 3);
 
     // 【修改】完成所有动作，返回起始点后，关闭激光
-    ros::service::waitForService("/close");
-    shoot_close_client.call(empty_srv);
-    ROS_INFO("Returned to start. Laser OFF.");
+    // ros::service::waitForService("/close");
+    // shoot_close_client.call(empty_srv);
+    // ROS_INFO("Returned to start. Laser OFF.");
     return 0;
 }

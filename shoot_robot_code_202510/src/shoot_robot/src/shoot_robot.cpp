@@ -301,12 +301,12 @@ int main(int argc, char **argv)
     shoot_open_client.call(empty_srv);
     ROS_INFO("Laser ON (Always on until return)");
 
-    Turn_safe_1(pub, 0.15, 10);  //0.15
-    Move_safe(pub, 0.40, 0.0, 70);
+    Turn_safe_1(pub, 0.15, 15);  //0.15
+    Move_safe(pub, 0.40, 0.0, 65);
     Reloc_Check(nh, pub); 
 
     // First target point
-    Move2goal(ac, pub, 2.404, 0.851, 2.35, "1");//0.14, 2.45, 2.355    x=1.611 y=1.417
+    Move2goal(ac, pub, 2.404, 0.851, 2.37, "1");//0.14, 2.45, 2.355    x=1.611 y=1.417
     SwingAndShoot(pub,0.08, 7.0, 3);           // 0.2 rad/s, 左右各20度, 摆2段
     Move2goal(ac, pub, 2.404, 0.851, 1.57, "1");
 
@@ -314,15 +314,14 @@ int main(int argc, char **argv)
     Reloc_Check(nh, pub); 
     Move_safe(pub, 0.0, -0.20, 20);
     SwingAndShootright(pub,0.08, 6.0, 3);
-    Reloc_Check(nh, pub);
-    Move_safe(pub, 0.0, 0.10, 10);
+    Move_safe(pub, 0.0, 0.10, 15);
 
-    Move2goal(ac, pub, 2.404, 0.851, 2.35, "1");//0.14, 2.45, 2.355    x=1.611 y=1.417
+    Reloc_Check(nh, pub); 
+    Move2goal(ac, pub, 2.404, 0.851, 2.37, "1");//0.14, 2.45, 2.355    x=1.611 y=1.417
     SwingAndShoot(pub,0.08, 7.0, 3);           // 0.2 rad/s, 左右各20度, 摆2段
     Move2goal(ac, pub, 2.404, 0.851, 1.57, "1");
 
     // Ninth target point
-    Reloc_Check(nh, pub); 
     Move_safe(pub, 0.0, -0.20, 20);
     SwingAndShootright(pub,0.08, 6.0, 3);
 
